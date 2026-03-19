@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.JSInterop;
 using Savio.MockServer.Data.Entities;
 using Savio.MockServer.Models;
@@ -9,7 +11,12 @@ namespace Savio.MockServer.Pages;
 public partial class Historico
 {
     [Inject] private BrowserTimezoneService TimezoneService { get; set; } = default!;
+    [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
 
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    private string currentUserId = string.Empty;
     private readonly HistoryFilterState filterState = new();
 
     [SupplyParameterFromQuery(Name = "mockId")]
@@ -26,6 +33,15 @@ public partial class Historico
 
     protected override async Task OnInitializedAsync()
     {
+        if (AuthState != null)
+        {
+            var state = await AuthState;
+            var user = await UserManager.GetUserAsync(state.User);
+            currentUserId = user?.Id ?? string.Empty;
+        }
+
+        filterState.UserId = currentUserId;
+
         if (MockId.HasValue)
         {
             filterState.MockEndpointId = MockId.Value;
@@ -79,7 +95,7 @@ public partial class Historico
             return;
         }
 
-        await HistoryRepo.ClearAsync();
+        await HistoryRepo.ClearAsync(currentUserId);
 
         currentPage = 1;
         await LoadHistory();
@@ -120,6 +136,7 @@ public partial class Historico
     private async Task ClearFilters()
     {
         filterState.Clear();
+        filterState.UserId = currentUserId;
         MockId = null;
         mockDescription = null;
         currentPage = 1;

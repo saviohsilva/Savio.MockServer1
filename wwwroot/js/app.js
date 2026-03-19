@@ -1,70 +1,62 @@
 /**
  * Savio Mock Server - JavaScript Principal
- * Fun��es utilit�rias e intera��es do cliente
+ * Funcoes utilitarias e interacoes do cliente
  */
 
 (function () {
     'use strict';
 
-    /**
-     * Inicializa��o quando o DOM est� pronto
-     */
+    // Aplica o tema salvo antes de qualquer render para evitar flash
+    (function applyStoredTheme() {
+        var theme = localStorage.getItem('savio-theme');
+        if (theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+    })();
+
     document.addEventListener('DOMContentLoaded', function () {
-        console.log('?? Savio Mock Server - Inicializado');
+        console.log('Savio Mock Server - Inicializado');
         initializeTooltips();
         initializeSidebarToggle();
     });
 
-    /**
-     * Inicializa tooltips do Bootstrap (se necess�rio)
-     */
     function initializeTooltips() {
-        const tooltipTriggerList = [].slice.call(
+        var tooltipTriggerList = [].slice.call(
             document.querySelectorAll('[data-bs-toggle="tooltip"]')
         );
-        
         if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
+            tooltipTriggerList.map(function (el) {
+                return new bootstrap.Tooltip(el);
             });
         }
     }
 
-    /**
-     * Gerencia o toggle do sidebar em dispositivos m�veis
-     */
     function initializeSidebarToggle() {
-        const sidebar = document.querySelector('.sidebar');
-        const toggleButton = document.querySelector('.navbar-toggler');
-        
+        var sidebar = document.querySelector('.sidebar');
+        var toggleButton = document.querySelector('.navbar-toggler');
+
         if (!sidebar || !toggleButton) return;
 
-        // Inicia sidebar fechado em mobile
         if (window.innerWidth < 768) {
             sidebar.classList.add('collapse');
         }
 
-        // Toggle do sidebar
         toggleButton.addEventListener('click', function (event) {
             event.stopPropagation();
             sidebar.classList.toggle('collapse');
         });
 
-        // Fecha sidebar ao clicar fora dele em mobile
         document.addEventListener('click', function (event) {
             if (window.innerWidth < 768) {
-                const isClickInsideSidebar = sidebar.contains(event.target);
-                const isToggleButton = toggleButton.contains(event.target);
-                
+                var isClickInsideSidebar = sidebar.contains(event.target);
+                var isToggleButton = toggleButton.contains(event.target);
                 if (!isClickInsideSidebar && !isToggleButton && !sidebar.classList.contains('collapse')) {
                     sidebar.classList.add('collapse');
                 }
             }
         });
 
-        // Fecha sidebar ao navegar em mobile
-        const navLinks = sidebar.querySelectorAll('.nav-link');
-        navLinks.forEach(function (link) {
+        sidebar.querySelectorAll('.nav-link').forEach(function (link) {
             link.addEventListener('click', function () {
                 if (window.innerWidth < 768) {
                     sidebar.classList.add('collapse');
@@ -72,7 +64,6 @@
             });
         });
 
-        // Gerencia visibilidade ao redimensionar janela
         window.addEventListener('resize', function () {
             if (window.innerWidth >= 768) {
                 sidebar.classList.remove('collapse');
@@ -82,83 +73,34 @@
         });
     }
 
-    /**
-     * Confirma a��o com o usu�rio
-     * @param {string} message - Mensagem de confirma��o
-     * @returns {boolean} - Resultado da confirma��o
-     */
+    // ── Funcoes expostas para Blazor JS Interop ────────────────────────────
+
     window.confirmAction = function (message) {
         return confirm(message);
     };
 
-    /**
-     * Copia texto para a �rea de transfer�ncia
-     * @param {string} text - Texto a ser copiado
-     */
     window.copyToClipboard = async function (text) {
         try {
             await navigator.clipboard.writeText(text);
-            showNotification('Copiado para �rea de transfer�ncia!', 'success');
+            showNotification('Copiado!', 'success');
         } catch (err) {
             console.error('Erro ao copiar:', err);
             showNotification('Erro ao copiar texto', 'error');
         }
     };
 
-    /**
-     * Exibe notifica��o tempor�ria
-     * @param {string} message - Mensagem da notifica��o
-     * @param {string} type - Tipo: success, error, warning, info
-     */
-    function showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type} position-fixed top-0 end-0 m-3 fade-in`;
-        notification.style.zIndex = '9999';
-        notification.textContent = message;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(function () {
-            notification.remove();
-        }, 3000);
-    }
-
-    /**
-     * Formata JSON para exibi��o
-     * @param {string} jsonString - String JSON
-     * @returns {string} - JSON formatado
-     */
     window.formatJson = function (jsonString) {
         try {
-            const obj = JSON.parse(jsonString);
-            return JSON.stringify(obj, null, 2);
+            return JSON.stringify(JSON.parse(jsonString), null, 2);
         } catch (e) {
             return jsonString;
         }
     };
 
-    /**
-     * Abre URL em nova aba
-     * @param {string} url - URL a ser aberta
-     */
     window.openInNewTab = function (url) {
         window.open(url, '_blank');
     };
 
-    /**
-     * Tema: aplica o tema salvo no localStorage ao carregar
-     */
-    (function applyStoredTheme() {
-        var theme = localStorage.getItem('savio-theme');
-        if (theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-        }
-    })();
-
-    /**
-     * Altera o tema da aplica��o e persiste em localStorage
-     * @param {string} theme - Nome do tema (vazio para padr�o)
-     */
     window.setTheme = function (theme) {
         if (theme) {
             document.documentElement.setAttribute('data-theme', theme);
@@ -169,21 +111,26 @@
         }
     };
 
-    /**
-     * Retorna o tema atual
-     * @returns {string} Nome do tema ou '' se padr�o
-     */
     window.getTheme = function () {
         return localStorage.getItem('savio-theme') || '';
     };
 
-    /**
-     * Retorna o offset de fuso hor�rio do navegador em minutos (igual a Date.getTimezoneOffset).
-     * Valores positivos = oeste de UTC (ex.: UTC-3 retorna 180).
-     * @returns {number}
-     */
     window.getBrowserTimezoneOffsetMinutes = function () {
         return new Date().getTimezoneOffset();
     };
+
+    // ── Utilitario interno ─────────────────────────────────────────────────
+
+    function showNotification(message, type) {
+        type = type || 'info';
+        var notification = document.createElement('div');
+        notification.className = 'alert alert-' + type + ' position-fixed top-0 end-0 m-3';
+        notification.style.zIndex = '9999';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        setTimeout(function () {
+            notification.remove();
+        }, 3000);
+    }
 
 })();

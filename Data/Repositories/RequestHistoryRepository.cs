@@ -97,10 +97,11 @@ public class RequestHistoryRepository : IRequestHistoryRepository
         return true;
     }
 
-    public async Task<int> ClearAsync()
+    public async Task<int> ClearAsync(string userId)
     {
-        // Evita trazer entidades para memória.
-        return await _context.RequestHistory.ExecuteDeleteAsync();
+        return await _context.RequestHistory
+            .Where(h => h.MockEndpoint.UserId == userId)
+            .ExecuteDeleteAsync();
     }
 
     private static IQueryable<RequestHistoryEntity> ApplyFilter(IQueryable<RequestHistoryEntity> query, RequestHistoryFilter filter)
@@ -145,6 +146,11 @@ public class RequestHistoryRepository : IRequestHistoryRepository
                 (h.RequestBody != null && h.RequestBody.Contains(txt)) ||
                 (h.ResponseBody != null && h.ResponseBody.Contains(txt)) ||
                 (h.ClientIp != null && h.ClientIp.Contains(txt)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.UserId))
+        {
+            query = query.Where(h => h.MockEndpoint.UserId == filter.UserId);
         }
 
         return query;

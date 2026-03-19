@@ -2,6 +2,7 @@ namespace Savio.MockServer.Models;
 
 public sealed class HistoryFilterState
 {
+    public string? UserId { get; set; }
     public int? MockEndpointId { get; set; }
     public string? Method { get; set; }
     public string? RouteContains { get; set; }
@@ -22,6 +23,7 @@ public sealed class HistoryFilterState
 
     public void Clear()
     {
+        UserId = null;
         MockEndpointId = null;
         Method = null;
         RouteContains = null;
@@ -36,6 +38,7 @@ public sealed class HistoryFilterState
     {
         return new RequestHistoryFilter
         {
+            UserId = UserId,
             MockEndpointId = MockEndpointId,
             Method = string.IsNullOrWhiteSpace(Method) ? null : Method,
             RouteContains = string.IsNullOrWhiteSpace(RouteContains) ? null : RouteContains,

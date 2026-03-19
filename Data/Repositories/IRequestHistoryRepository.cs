@@ -15,5 +15,5 @@ public interface IRequestHistoryRepository
     Task<int> GetFilteredCountAsync(RequestHistoryFilter filter);
     Task<RequestHistoryEntity?> GetByIdAsync(int id);
     Task<bool> DeleteByIdAsync(int id);
-    Task<int> ClearAsync();
+    Task<int> ClearAsync(string userId);
 }

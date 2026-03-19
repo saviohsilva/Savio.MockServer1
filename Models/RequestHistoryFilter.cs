@@ -10,4 +10,5 @@ public sealed class RequestHistoryFilter
     public DateTime? FromUtc { get; set; }
     public DateTime? ToUtc { get; set; }
     public bool IncludeMockEndpoint { get; set; } = true;
+    public string? UserId { get; set; }
 }

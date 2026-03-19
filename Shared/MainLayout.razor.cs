@@ -38,9 +38,25 @@ public partial class MainLayout
     {
         if (firstRender)
         {
-            currentTheme = await JS.InvokeAsync<string>("getTheme");
-            var offset = await JS.InvokeAsync<int>("getBrowserTimezoneOffsetMinutes");
-            TimezoneService.SetOffset(offset);
+            try
+            {
+                currentTheme = await JS.InvokeAsync<string>("getTheme") ?? string.Empty;
+            }
+            catch
+            {
+                currentTheme = string.Empty;
+            }
+
+            try
+            {
+                var offset = await JS.InvokeAsync<int>("getBrowserTimezoneOffsetMinutes");
+                TimezoneService.SetOffset(offset);
+            }
+            catch
+            {
+                // mantém UTC como fallback
+            }
+
             StateHasChanged();
         }
     }
