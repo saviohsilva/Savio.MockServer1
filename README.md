@@ -87,7 +87,7 @@ Savio.MockServer/
 
 ```bash
 # Clone o repositório
-git clone https://github.com/saviohsilva/Savio.MockServer.git
+git clone https://github.com/saviohsilva/Savio.MockServer1.git
 cd Savio.MockServer
 
 # Restaurar dependências

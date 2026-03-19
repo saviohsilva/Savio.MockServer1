@@ -205,3 +205,21 @@ main {
         padding-right: 1.5rem !important;
     }
 }
+
+/* ?? Footer ?? */
+.footer-copyright {
+    border-top: 1px solid var(--border-color, #dee2e6);
+    padding: 0.6rem 2rem;
+    font-size: 0.78rem;
+    color: var(--text-muted, #6c757d);
+    text-align: center;
+}
+
+.footer-copyright a {
+    color: var(--text-muted, #6c757d);
+    text-decoration: none;
+}
+
+.footer-copyright a:hover {
+    text-decoration: underline;
+}

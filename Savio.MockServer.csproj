@@ -12,7 +12,7 @@
     <Product>Savio Mock Server</Product>
     <Description>Servidor de mock de APIs HTTP com interface visual, autenticação e isolamento por usuário.</Description>
     <Copyright>Copyright © 2026 Sávio Henrique da Silva</Copyright>
-    <RepositoryUrl>https://github.com/saviohsilva/Savio.MockServer</RepositoryUrl>
+    <RepositoryUrl>https://github.com/saviohsilva/Savio.MockServer1</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

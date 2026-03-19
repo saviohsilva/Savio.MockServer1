@@ -18,6 +18,7 @@ public partial class MainLayout
     private Task<AuthenticationState>? AuthState { get; set; }
 
     private string currentTheme = string.Empty;
+    protected int CurrentYear => DateTime.Now.Year;
     private string serverUrl = string.Empty;
 
     protected override async Task OnInitializedAsync()

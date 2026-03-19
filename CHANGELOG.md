@@ -59,5 +59,5 @@ e este projeto adota [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ---
 
-[1.0.0]: https://github.com/saviohsilva/Savio.MockServer/releases/tag/v1.0.0
-[Não lançado]: https://github.com/saviohsilva/Savio.MockServer/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/saviohsilva/Savio.MockServer1/releases/tag/v1.0.0
+[Não lançado]: https://github.com/saviohsilva/Savio.MockServer1/compare/v1.0.0...HEAD
