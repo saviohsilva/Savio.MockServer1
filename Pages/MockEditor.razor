@@ -1,0 +1,254 @@
+﻿@page "/mock/create"
+@page "/mock/edit/{Id}"
+@using Savio.MockServer.Services
+@using Savio.MockServer.Models
+@using Savio.MockServer.Data.Repositories
+@using System.Text.Json
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using Savio.MockServer.Data.Entities
+@inject MockService MockService
+@inject IUnmockedRequestRepository UnmockedRepo
+@inject IMockBinaryStorage BinaryStorage
+@inject NavigationManager Navigation
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>@(IsEdit ? "Editar Mock" : "Novo Mock")</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>@(IsEdit ? "Editar Mock" : "Novo Mock")</h1>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-secondary" @onclick="Cancel">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Configurações Básicas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Rota *</label>
+                        <input type="text" class="form-control" @bind="mock.Route" placeholder="/api/exemplo" />
+                        <small class="form-text text-muted">Ex: /api/usuarios ou /api/usuarios/{id}</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Método HTTP *</label>
+                            <select class="form-select" @bind="mock.Method">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                                <option value="PUT">PUT</option>
+                                <option value="DELETE">DELETE</option>
+                                <option value="PATCH">PATCH</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Código HTTP *</label>
+                            <input type="number" class="form-control" @bind="mock.StatusCode" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Delay (ms)</label>
+                            <input type="number" class="form-control" @bind="mock.DelayMs" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <input type="text" class="form-control" @bind="mock.Description" placeholder="Descrição do endpoint" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Agrupamento</label>
+                        <select class="form-select" @bind="mock.MockGroupId">
+                            <option value="">Nenhum (isolado)</option>
+                            @foreach (var group in groups)
+                            {
+                                <option value="@group.Id">@group.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" @bind="mock.IsActive" id="activeSwitch">
+                            <label class="form-check-label" for="activeSwitch">
+                                Endpoint ativo
+                            </label>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(saveError))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> @saveError
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Headers Customizados</h5>
+                </div>
+                <div class="card-body">
+                    @foreach (var header in headersInput)
+                    {
+                        <div class="row mb-2">
+                            <div class="col-5">
+                                <input type="text" class="form-control" placeholder="Nome do header" @bind="header.Key" />
+                            </div>
+                            <div class="col-5">
+                                <input type="text" class="form-control" placeholder="Valor" @bind="header.Value" />
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-danger w-100" @onclick="() => RemoveHeader(header)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                    <button class="btn btn-sm btn-outline-primary" @onclick="AddHeader">
+                        <i class="bi bi-plus"></i> Adicionar Header
+                    </button>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Response Body</h5>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <input type="radio" class="btn-check" name="responseType" id="jsonRadio" @onchange="() => SetResponseType(true)" checked="@useJson">
+                            <label class="btn btn-outline-primary" for="jsonRadio">JSON</label>
+
+                            <input type="radio" class="btn-check" name="responseType" id="rawRadio" @onchange="() => SetResponseType(false)" checked="@(!useJson && !useBinary && !useMultipart)">
+                            <label class="btn btn-outline-primary" for="rawRadio">Raw/Primitivo</label>
+
+                            <input type="radio" class="btn-check" name="responseType" id="binRadio" @onchange="() => SetResponseBinary()" checked="@useBinary">
+                            <label class="btn btn-outline-primary" for="binRadio">Binário (Arquivo)</label>
+
+                            <input type="radio" class="btn-check" name="responseType" id="multiRadio" @onchange="() => SetResponseMultipart()" checked="@useMultipart">
+                            <label class="btn btn-outline-primary" for="multiRadio">Multipart (JSON)</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (useMultipart)
+                    {
+                        <div class="mb-2">
+                            <label class="form-label">JSON/Config do multipart</label>
+                            <textarea class="form-control font-monospace" rows="8" @bind="mock.ResponseMultipartJson" placeholder='{"subtype":"mixed","parts":[{"headers":{"Content-Disposition":"form-data; name=\"meta\""},"text":"ok"},{"fileName":"file.bin","contentType":"application/octet-stream","blobId":123}]}'></textarea>
+                            <small class="form-text text-muted">Você pode editar o JSON. Para arquivos, use o upload abaixo (gera BlobId automaticamente).</small>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label">Adicionar arquivo como part</label>
+                            <InputFile OnChange="OnMultipartFileSelected" />
+                            @if (!string.IsNullOrEmpty(uploadedMultipartError))
+                            {
+                                <div class="text-danger small">
+                                    <i class="bi bi-exclamation-circle"></i> @uploadedMultipartError
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (useBinary)
+                    {
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Content-Type</label>
+                                <input class="form-control" placeholder="application/pdf" @bind="mock.ResponseBodyContentType" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">File name</label>
+                                <input class="form-control" placeholder="arquivo.pdf" @bind="mock.ResponseBodyFileName" />
+                            </div>
+                        </div>
+
+                        <InputFile OnChange="OnBinaryFileSelected" accept="*/*" />
+                        @if (!string.IsNullOrEmpty(uploadedBinaryError))
+                        {
+                            <div class="text-danger small">
+                                <i class="bi bi-exclamation-circle"></i> @uploadedBinaryError
+                            </div>
+                        }
+                        <small class="form-text text-muted">Faça upload do arquivo. O servidor responderá os bytes reais. Se quiser forçar download, informe File name.</small>
+                    }
+                    else if (useJson)
+                    {
+                        <textarea class="form-control font-monospace" rows="10" @bind="mock.ResponseBodyJson" placeholder='{"mensagem": "Hello World"}'></textarea>
+                        <small class="form-text text-muted">Cole seu JSON aqui (será validado ao salvar)</small>
+                    }
+                    else
+                    {
+                        <textarea class="form-control font-monospace" rows="10" @bind="mock.ResponseBodyRaw" placeholder="12345 ou texto simples"></textarea>
+                        <small class="form-text text-muted">Para números primitivos (long, int) ou texto simples</small>
+                    }
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <button class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
+                <button class="btn btn-primary" @onclick="Save">
+                    <i class="bi bi-save"></i> Salvar Mock
+                </button>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h6 class="mb-0">💡 Dicas</h6>
+                </div>
+                <div class="card-body">
+                    <h6>Rotas com Parâmetros</h6>
+                    <p class="small">Use <code>{'{nomeParametro}'}</code> para parâmetros dinâmicos:</p>
+                    <code class="small">/api/usuarios/{'{id}'}</code>
+
+                    <hr />
+
+                    <h6 class="mt-3">Response Types</h6>
+                    <ul class="small">
+                        <li><strong>JSON:</strong> Para objetos e arrays</li>
+                        <li><strong>Raw/Primitivo:</strong> Para números (<code>12345</code>) ou texto simples</li>
+                        <li><strong>Binário:</strong> Para arquivos (PDF/Imagem/etc) via Base64</li>
+                        <li><strong>Multipart (JSON):</strong> Para respostas mais complexas com múltiplas partes</li>
+                    </ul>
+
+                    <hr />
+
+                    <h6 class="mt-3">Headers Comuns</h6>
+                    <ul class="small">
+                        <li><code>Content-Type: application/json</code></li>
+                        <li><code>Content-Type: text/plain</code></li>
+                        <li><code>Content-Type: application/pdf</code></li>
+                    </ul>
+
+                    <hr />
+
+                    <h6 class="mt-3">Códigos HTTP</h6>
+                    <ul class="small">
+                        <li><strong>200:</strong> OK</li>
+                        <li><strong>201:</strong> Created</li>
+                        <li><strong>400:</strong> Bad Request</li>
+                        <li><strong>404:</strong> Not Found</li>
+                        <li><strong>500:</strong> Internal Server Error</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

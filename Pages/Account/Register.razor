@@ -1,0 +1,78 @@
+@page "/account/register"
+@layout Savio.MockServer.Shared.AuthLayout
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity.UI.Services
+@using Savio.MockServer.Data.Entities
+@using Savio.MockServer.Data
+@using Microsoft.EntityFrameworkCore
+@using System.Text.RegularExpressions
+@attribute [AllowAnonymous]
+<PageTitle>Registrar - Savio Mock Server</PageTitle>
+
+<div class="card shadow" style="width: 100%; max-width: 480px;">
+    <div class="card-body p-4">
+        <div class="text-center mb-4">
+            <img src="img/logo.svg" alt="Mock Server" width="48" height="48" />
+            <h4 class="mt-2">Criar Conta</h4>
+            <p class="text-muted small">Preencha os dados para criar sua conta</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> @errorMessage
+            </div>
+        }
+
+        <EditForm Model="registerModel" OnValidSubmit="HandleRegister">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label class="form-label">E-mail *</label>
+                <InputText class="form-control" @bind-Value="registerModel.Email" placeholder="seu@email.com" />
+                <ValidationMessage For="() => registerModel.Email" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Alias (endereço do mock) *</label>
+                <div class="input-group">
+                    <span class="input-group-text">@BaseDisplayUrl/</span>
+                    <InputText class="form-control" @bind-Value="registerModel.Alias" placeholder="meuhost" />
+                </div>
+                <small class="form-text text-muted">
+                    Suas rotas ficarão em: <code>http://@BaseDisplayUrl/@registerModel.Alias/sua_rota</code>
+                </small>
+                <ValidationMessage For="() => registerModel.Alias" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Senha *</label>
+                <InputText type="password" class="form-control" @bind-Value="registerModel.Password" placeholder="Mínimo 6 caracteres" />
+                <ValidationMessage For="() => registerModel.Password" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Confirmar Senha *</label>
+                <InputText type="password" class="form-control" @bind-Value="registerModel.ConfirmPassword" placeholder="Repita a senha" />
+                <ValidationMessage For="() => registerModel.ConfirmPassword" />
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                <i class="bi bi-person-plus"></i> Criar Conta
+            </button>
+        </EditForm>
+
+        <hr />
+
+        <div class="text-center">
+            <a href="/account/login" class="text-decoration-none">
+                <i class="bi bi-box-arrow-in-right"></i> Já tenho conta
+            </a>
+        </div>
+    </div>
+</div>

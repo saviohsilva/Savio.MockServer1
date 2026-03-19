@@ -1,0 +1,208 @@
+@page "/account/mfa-setup"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity.UI.Services
+@using Savio.MockServer.Data.Entities
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+<PageTitle>Configurar MFA - Savio Mock Server</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-shield-lock"></i> Autenticação Multifator (MFA)</h1>
+            <p class="lead">Configure uma camada extra de segurança para sua conta</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-secondary" @onclick='() => Navigation.NavigateTo("/account/settings")'>
+                <i class="bi bi-arrow-left"></i> Voltar
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert @statusClass">
+            @statusMessage
+        </div>
+    }
+
+    @if (!mfaEnabled)
+    {
+        @if (Env.IsDevelopment())
+        {
+            <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle"></i> <strong>Modo de desenvolvimento:</strong>
+                O MFA será automaticamente ignorado durante o login neste ambiente.
+            </div>
+        }
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Escolha o método de verificação</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="mfaMethod" id="methodAuthenticator"
+                           value="Authenticator" checked="@(selectedMethod == "Authenticator")"
+                           @onchange='() => selectedMethod = "Authenticator"' />
+                    <label class="form-check-label" for="methodAuthenticator">
+                        <i class="bi bi-phone"></i> Aplicativo Autenticador (Google/Microsoft Authenticator)
+                        <small class="d-block text-muted">Recomendado — mais seguro e funciona offline</small>
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="mfaMethod" id="methodEmail"
+                           value="Email" checked="@(selectedMethod == "Email")"
+                           @onchange='() => selectedMethod = "Email"' />
+                    <label class="form-check-label" for="methodEmail">
+                        <i class="bi bi-envelope"></i> E-mail
+                        <small class="d-block text-muted">Um código será enviado para seu e-mail a cada login</small>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                @if (selectedMethod == "Authenticator")
+                {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Habilitar Autenticação em Duas Etapas</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Escaneie o QR Code abaixo com seu aplicativo autenticador (Google Authenticator, Microsoft Authenticator, etc.):</p>
+
+                        @if (!string.IsNullOrEmpty(qrCodeUri))
+                        {
+                            <div class="text-center mb-3">
+                                <div class="p-3 bg-white d-inline-block rounded border">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=@Uri.EscapeDataString(qrCodeUri)" 
+                                         alt="QR Code MFA" width="200" height="200" />
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Ou insira esta chave manualmente:</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-monospace" value="@sharedKey" readonly />
+                                    <button class="btn btn-outline-secondary" @onclick="() => CopyToClipboard(sharedKey)">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+
+                        <hr />
+
+                        <div class="mb-3">
+                            <label class="form-label">Digite o código gerado pelo app:</label>
+                            <input type="text" class="form-control text-center fs-4" style="max-width:200px;"
+                                   @bind="verificationCode" placeholder="000000" maxlength="7" />
+                        </div>
+
+                        <button class="btn btn-primary" @onclick="EnableMfa" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            <i class="bi bi-shield-check"></i> Habilitar MFA
+                        </button>
+                    </div>
+                </div>
+                }
+                else
+                {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Habilitar MFA por E-mail</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (!emailCodeSent)
+                        {
+                            <p>Clique no botão abaixo para enviar um código de verificação para seu e-mail e confirmar a configuração do MFA por e-mail.</p>
+                            <button class="btn btn-primary" @onclick="SendEmailTestCode" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                <i class="bi bi-envelope"></i> Enviar código de verificação
+                            </button>
+                        }
+                        else
+                        {
+                            <p class="text-success"><i class="bi bi-check-circle"></i> Código enviado para seu e-mail! Verifique sua caixa de entrada.</p>
+                            <div class="mb-3">
+                                <label class="form-label">Digite o código recebido por e-mail:</label>
+                                <input type="text" class="form-control text-center fs-4" style="max-width:200px;"
+                                       @bind="verificationCode" placeholder="000000" maxlength="7" />
+                            </div>
+                            <button class="btn btn-primary" @onclick="EnableMfaEmail" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                <i class="bi bi-shield-check"></i> Habilitar MFA por E-mail
+                            </button>
+                            <button class="btn btn-link ms-2" @onclick="SendEmailTestCode" disabled="@isLoading">
+                                <i class="bi bi-arrow-repeat"></i> Reenviar código
+                            </button>
+                        }
+                    </div>
+                </div>
+                }
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card bg-light">
+                    <div class="card-header">
+                        <h6 class="mb-0">💡 Como funciona</h6>
+                    </div>
+                    <div class="card-body">
+                        <ol class="small mb-0">
+                            <li>Instale um app autenticador (Google Authenticator, Microsoft Authenticator, Authy)</li>
+                            <li>Escaneie o QR Code ou insira a chave manualmente</li>
+                            <li>Digite o código de 6 dígitos gerado pelo app</li>
+                            <li>Guarde os códigos de recuperação em local seguro</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-check-circle text-success"></i> MFA Habilitado</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-success">A autenticação em duas etapas está habilitada na sua conta.</p>
+                        
+                        @if (recoveryCodes?.Any() == true)
+                        {
+                            <div class="alert alert-warning">
+                                <h6><i class="bi bi-exclamation-triangle"></i> Códigos de Recuperação</h6>
+                                <p class="small">Guarde estes códigos em local seguro. Cada código só pode ser usado uma vez.</p>
+                                <div class="bg-dark text-white p-3 rounded font-monospace">
+                                    @foreach (var recoveryCode in recoveryCodes)
+                                    {
+                                        <div>@recoveryCode</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <button class="btn btn-outline-danger" @onclick="DisableMfa">
+                            <i class="bi bi-shield-x"></i> Desabilitar MFA
+                        </button>
+                        <button class="btn btn-outline-secondary ms-2" @onclick="GenerateNewRecoveryCodes">
+                            <i class="bi bi-arrow-repeat"></i> Gerar Novos Códigos de Recuperação
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

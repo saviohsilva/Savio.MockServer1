@@ -1,0 +1,30 @@
+@page "/account/confirm-email"
+@layout Savio.MockServer.Shared.AuthLayout
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Savio.MockServer.Data.Entities
+@attribute [AllowAnonymous]
+<PageTitle>Confirmar E-mail - Savio Mock Server</PageTitle>
+
+<div class="card shadow" style="width: 100%; max-width: 420px;">
+    <div class="card-body p-4 text-center">
+        @if (confirmed)
+        {
+            <i class="bi bi-check-circle-fill fs-1 text-success d-block mb-3"></i>
+            <h4>E-mail Confirmado!</h4>
+            <p class="text-muted">Sua conta foi ativada com sucesso. Você já pode fazer login.</p>
+            <a href="/account/login" class="btn btn-primary">
+                <i class="bi bi-box-arrow-in-right"></i> Ir para Login
+            </a>
+        }
+        else
+        {
+            <i class="bi bi-x-circle-fill fs-1 text-danger d-block mb-3"></i>
+            <h4>Erro na Confirmação</h4>
+            <p class="text-muted">@errorMessage</p>
+            <a href="/account/login" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+        }
+    </div>
+</div>

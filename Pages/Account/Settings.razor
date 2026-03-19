@@ -1,0 +1,131 @@
+@page "/account/settings"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
+@using Savio.MockServer.Data.Entities
+@using System.Text.RegularExpressions
+@attribute [Authorize]
+<PageTitle>Configurações da Conta - Savio Mock Server</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-gear"></i> Configurações da Conta</h1>
+        </div>
+    </div>
+
+    @if (user != null)
+    {
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-person"></i> Informações</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-bold" style="width:200px;">E-mail</td>
+                                    <td>@user.Email</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Alias</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            @if (isEditingAlias)
+                                            {
+                                                <div class="input-group" style="max-width: 350px;">
+                                                    <span class="input-group-text">/</span>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           @bind="newAlias" @bind:event="oninput"
+                                                           placeholder="meu-alias" maxlength="50" />
+                                                </div>
+                                                <button class="btn btn-sm btn-success" @onclick="SaveAlias" disabled="@isSavingAlias">
+                                                    @if (isSavingAlias)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm"></span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-check-lg"></i>
+                                                    }
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEditAlias">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <code>@user.Alias</code>
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="StartEditAlias">
+                                                    <i class="bi bi-pencil"></i> Alterar
+                                                </button>
+                                            }
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(aliasMessage))
+                                        {
+                                            <small class="@aliasMessageClass mt-1 d-block">@aliasMessage</small>
+                                        }
+                                        @if (isEditingAlias)
+                                        {
+                                            <small class="text-warning d-block mt-1">
+                                                <i class="bi bi-exclamation-triangle"></i> Ao alterar o alias, todas as suas URLs de mock mudarão. Certifique-se de atualizar os clientes que consomem suas rotas.
+                                            </small>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">URL base das rotas</td>
+                                    <td><code>@Navigation.BaseUri@user.Alias/</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">E-mail confirmado</td>
+                                    <td>
+                                        @if (user.EmailConfirmed)
+                                        {
+                                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Sim</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning"><i class="bi bi-exclamation-triangle"></i> Não</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">MFA</td>
+                                    <td>
+                                        @if (mfaEnabled)
+                                        {
+                                            <span class="badge bg-success"><i class="bi bi-shield-check"></i> Habilitado</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary"><i class="bi bi-shield-x"></i> Desabilitado</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Membro desde</td>
+                                    <td>@TimezoneService.FormatLocalTime(user.CreatedAt, "dd/MM/yyyy HH:mm")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-shield-lock"></i> Segurança</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex gap-2">
+                            <a href="/account/mfa-setup" class="btn btn-outline-primary">
+                                <i class="bi bi-shield-lock"></i> @(mfaEnabled ? "Gerenciar MFA" : "Habilitar MFA")
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

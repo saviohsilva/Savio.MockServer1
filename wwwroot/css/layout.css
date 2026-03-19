@@ -1,0 +1,207 @@
+/* ========================================
+   LAYOUT PRINCIPAL
+   ======================================== */
+
+html, body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1;
+}
+
+/* ========================================
+   SIDEBAR / MENU LATERAL
+   ======================================== */
+
+.sidebar {
+    background: linear-gradient(180deg, var(--bg-sidebar) 0%, var(--bg-dark) 100%);
+    border-right: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+.sidebar .top-row {
+    background-color: var(--color-primary);
+    border-bottom: 2px solid var(--color-primary-dark);
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+    box-shadow: var(--shadow-sm);
+}
+
+.sidebar .top-row a,
+.sidebar .top-row .btn-link {
+    white-space: nowrap;
+    margin-left: 1.5rem;
+    text-decoration: none;
+    color: var(--text-light);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.sidebar .navbar-toggler {
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.sidebar .navbar-toggler:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Contorno preto na logo do sidebar para contraste com fundo laranja */
+.sidebar-logo {
+    filter: drop-shadow(-1px -1px 0 rgba(0, 0, 0, 0.75))
+            drop-shadow( 1px -1px 0 rgba(0, 0, 0, 0.75))
+            drop-shadow(-1px  1px 0 rgba(0, 0, 0, 0.75))
+            drop-shadow( 1px  1px 0 rgba(0, 0, 0, 0.75));
+}
+
+/* ========================================
+   NAVEGAÇÃO
+   ======================================== */
+
+.sidebar nav {
+    padding-top: 1rem;
+}
+
+.sidebar .nav-item {
+    font-size: 1rem;
+    padding-bottom: 0.5rem;
+}
+
+.sidebar .nav-item:first-of-type {
+    padding-top: 1rem;
+}
+
+.sidebar .nav-item:last-of-type {
+    padding-bottom: 1rem;
+}
+
+.sidebar .nav-item a {
+    color: var(--text-muted);
+    border-radius: var(--border-radius);
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    line-height: 3rem;
+    padding-left: 1rem;
+    text-decoration: none;
+    transition: var(--transition-fast);
+    margin: 0 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar .nav-item a span[class^="bi"] {
+    margin-right: 0.75rem;
+    font-size: 1.2rem;
+}
+
+.sidebar .nav-item a.active {
+    background-color: var(--color-primary);
+    color: var(--text-light);
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+}
+
+.sidebar .nav-item a:hover {
+    background-color: var(--bg-sidebar-hover);
+    color: var(--text-light);
+}
+
+.sidebar .nav-item a.active:hover {
+    background-color: var(--color-primary-dark);
+}
+
+/* ========================================
+   TOP BAR (ÁREA PRINCIPAL)
+   ======================================== */
+
+.top-row.px-4 {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    box-shadow: var(--shadow-sm);
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+/* Mobile First - Sidebar colapsável */
+@media (max-width: 767.98px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 250px;
+        height: 100vh;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .sidebar:not(.collapse) {
+        transform: translateX(0);
+    }
+    
+    .sidebar.collapse {
+        transform: translateX(-100%);
+    }
+    
+    /* Overlay quando menu aberto em mobile */
+    .sidebar:not(.collapse)::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 250px;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: -1;
+    }
+}
+
+/* Desktop - Sidebar sempre visível */
+@media (min-width: 768px) {
+    .page {
+        flex-direction: row;
+    }
+
+    .sidebar {
+        width: 250px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+    }
+    
+    /* Esconder botão toggle em desktop */
+    .sidebar .navbar-toggler {
+        display: none;
+    }
+
+    .top-row.px-4 {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .top-row.px-4,
+    article {
+        padding-left: 2rem !important;
+        padding-right: 1.5rem !important;
+    }
+}

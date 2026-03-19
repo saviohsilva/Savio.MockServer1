@@ -1,0 +1,52 @@
+@page "/account/login"
+@layout Savio.MockServer.Shared.AuthLayout
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+
+<PageTitle>Login - Savio Mock Server</PageTitle>
+
+<div class="card shadow" style="width: 100%; max-width: 420px;">
+    <div class="card-body p-4">
+        <div class="text-center mb-4">
+            <img src="img/logo.svg" alt="Mock Server" width="48" height="48" />
+            <h4 class="mt-2">Savio Mock Server</h4>
+            <p class="text-muted small">Faça login para continuar</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> @errorMessage
+            </div>
+        }
+
+        <form method="post" action="/account/do-login">
+            <div class="mb-3">
+                <label class="form-label">E-mail</label>
+                <input type="email" class="form-control" name="email" placeholder="seu@email.com" required />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Senha</label>
+                <input type="password" class="form-control" name="password" placeholder="Sua senha" required />
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" name="rememberMe" value="true" id="rememberMe" />
+                <label class="form-check-label" for="rememberMe">Lembrar de mim</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-box-arrow-in-right"></i> Entrar
+            </button>
+        </form>
+
+        <hr />
+
+        <div class="text-center">
+            <a href="/account/register" class="text-decoration-none">
+                <i class="bi bi-person-plus"></i> Criar conta
+            </a>
+        </div>
+    </div>
+</div>

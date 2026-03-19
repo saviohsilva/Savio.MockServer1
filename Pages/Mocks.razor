@@ -1,0 +1,360 @@
+@page "/mocks"
+@using Savio.MockServer.Services
+@using Savio.MockServer.Models
+@using Savio.MockServer.Components
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.AspNetCore.Identity
+@using Savio.MockServer.Data.Entities
+@inject MockService MockService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Gerenciamento de Mocks</PageTitle>
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-4"><i class="bi bi-collection"></i> Gerenciamento de Mocks</h1>
+            <p class="lead">Gerencie todos os seus mocks e agrupamentos</p>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-2">
+                    <label class="form-label small text-muted">Método</label>
+                    <select class="form-select form-select-sm" @bind="filter.Method" @bind:after="OnFilterChanged">
+                        <option value="">Todos</option>
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="PATCH">PATCH</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <label class="form-label small text-muted">Rota contém</label>
+                    <input class="form-control form-control-sm" placeholder="Ex: /api/token" @bind="filter.RouteContains" @bind:after="OnFilterChanged" />
+                </div>
+
+                <div class="col-12 col-md-2">
+                    <label class="form-label small text-muted">Status</label>
+                    <select class="form-select form-select-sm" @bind="filterActiveString" @bind:after="OnFilterChanged">
+                        <option value="">Todos</option>
+                        <option value="true">Ativos</option>
+                        <option value="false">Inativos</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <label class="form-label small text-muted">Descrição contém</label>
+                    <input class="form-control form-control-sm" placeholder="Ex: token" @bind="filter.DescriptionContains" @bind:after="OnFilterChanged" />
+                </div>
+
+                <div class="col-12 col-md-2">
+                    <label class="form-label small text-muted">Grupo</label>
+                    <select class="form-select form-select-sm" @bind="filterGroupString" @bind:after="OnFilterChanged">
+                        <option value="">Todos</option>
+                        <option value="-1">Sem grupo</option>
+                        @foreach (var g in groups)
+                        {
+                            <option value="@g.Id">@g.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-1">
+                    <button class="btn btn-sm btn-outline-secondary w-100" @onclick="ClearFilters">
+                        <i class="bi bi-x-circle"></i> Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas -->
+    @if (!string.IsNullOrEmpty(alertMessage))
+    {
+        <div class="alert @alertClass alert-dismissible fade show">
+            <i class="bi @alertIcon"></i> @alertMessage
+            @if (alertDetails.Count > 0)
+            {
+                <ul class="mb-0 mt-2">
+                    @foreach (var detail in alertDetails)
+                    {
+                        <li>@detail</li>
+                    }
+                </ul>
+            }
+            <button type="button" class="btn-close" @onclick="ClearAlert"></button>
+        </div>
+    }
+
+    <!-- Abas -->
+    <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == "mocks" ? "active" : "")" type="button"
+                    @onclick='() => activeTab = "mocks"'>
+                <i class="bi bi-box"></i> Mocks <span class="badge bg-secondary ms-1">@allFilteredMocks.Count</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == "groups" ? "active" : "")" type="button"
+                    @onclick='() => activeTab = "groups"'>
+                <i class="bi bi-folder"></i> Agrupamentos <span class="badge bg-secondary ms-1">@groups.Count</span>
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content border border-top-0 rounded-bottom">
+        <!-- Aba Mocks -->
+        <div class="tab-pane fade @(activeTab == "mocks" ? "show active" : "")" role="tabpanel">
+            <div class="p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <button class="btn btn-outline-success btn-sm me-1" @onclick="ActivateSelectedMocksAsync" disabled="@(!selectedMocks.Any())">
+                            <i class="bi bi-toggle-on"></i> Ativar Selecionados
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm me-1" @onclick="DeactivateSelectedMocksAsync" disabled="@(!selectedMocks.Any())">
+                            <i class="bi bi-toggle-off"></i> Desativar Selecionados
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" @onclick="DeleteSelectedMocks" disabled="@(!selectedMocks.Any())">
+                            <i class="bi bi-trash"></i> Excluir Selecionados
+                        </button>
+                    </div>
+                    <button class="btn btn-primary btn-sm" @onclick="NavigateToCreateMock">
+                        <i class="bi bi-plus-circle"></i> Novo Mock
+                    </button>
+                </div>
+
+                @if (!sortedMocks.Any())
+                {
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle"></i> Nenhum mock encontrado para os filtros atuais.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px;">
+                                        <input type="checkbox" class="form-check-input" @onchange="ToggleSelectAllMocks"
+                                               checked="@(selectedMocks.Count == sortedMocks.Count && sortedMocks.Any())" />
+                                    </th>
+                                    <th role="button" @onclick='() => ToggleSort("status")'>
+                                        Status <i class="bi @GetSortIcon("status")"></i>
+                                    </th>
+                                    <th role="button" @onclick='() => ToggleSort("method")'>
+                                        Método <i class="bi @GetSortIcon("method")"></i>
+                                    </th>
+                                    <th role="button" @onclick='() => ToggleSort("route")'>
+                                        Rota <i class="bi @GetSortIcon("route")"></i>
+                                    </th>
+                                    <th role="button" @onclick='() => ToggleSort("statusCode")'>
+                                        Código <i class="bi @GetSortIcon("statusCode")"></i>
+                                    </th>
+                                    <th role="button" @onclick='() => ToggleSort("description")'>
+                                        Descrição <i class="bi @GetSortIcon("description")"></i>
+                                    </th>
+                                    <th role="button" @onclick='() => ToggleSort("group")'>
+                                        Grupo <i class="bi @GetSortIcon("group")"></i>
+                                    </th>
+                                    <th role="button" @onclick='() => ToggleSort("calls")'>
+                                        Chamadas <i class="bi @GetSortIcon("calls")"></i>
+                                    </th>
+                                    <th style="width:200px;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var mock in sortedMocks)
+                                {
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" class="form-check-input"
+                                                   checked="@selectedMocks.Contains(mock.Id)"
+                                                   @onchange="e => ToggleMockSelection(mock.Id, (bool)(e.Value ?? false))" />
+                                        </td>
+                                        <td><span class="badge bg-@(mock.IsActive ? "success" : "secondary")">@(mock.IsActive ? "Ativo" : "Inativo")</span></td>
+                                        <td><span class="badge bg-@UiHelpers.GetMethodColor(mock.Method)">@mock.Method</span></td>
+                                        <td class="route-cell"><code>@mock.Route</code></td>
+                                        <td><span class="badge bg-@UiHelpers.GetStatusColor(mock.StatusCode)">@mock.StatusCode</span></td>
+                                        <td>@mock.Description</td>
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(mock.MockGroupName))
+                                            {
+                                                <span class="badge bg-primary"><i class="bi bi-folder"></i> @mock.MockGroupName</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">—</span>
+                                            }
+                                        </td>
+                                        <td><span class="badge bg-info">@mock.CallCount</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-outline-primary" title="Editar" @onclick="() => NavigateToEdit(mock.Id)">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary" title="Duplicar" @onclick="() => DuplicateMock(mock.Id)">
+                                                    <i class="bi bi-copy"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" title="Excluir" @onclick="() => DeleteMock(mock.Id)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-info" title="Ver histórico" @onclick="() => ViewHistory(mock.Id)">
+                                                    <i class="bi bi-clock-history"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Aba Agrupamentos -->
+        <div class="tab-pane fade @(activeTab == "groups" ? "show active" : "")" role="tabpanel">
+            <div class="p-3">
+                <div class="d-flex justify-content-end mb-3">
+                    <button class="btn btn-primary btn-sm" @onclick="NavigateToCreateGroup">
+                        <i class="bi bi-folder-plus"></i> Novo Grupo
+                    </button>
+                </div>
+
+                @if (!groups.Any())
+                {
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle"></i> Nenhum agrupamento criado.
+                    </div>
+                }
+                else
+                {
+                    <div class="accordion" id="groupsAccordion">
+                        @foreach (var group in groups)
+                        {
+                            var groupId = group.Id;
+                            var activeMocks = group.MockEndpoints.Count(m => m.IsActive);
+                            var filteredMocks = ApplyFilterToList(group.MockEndpoints);
+                            var isExpanded = expandedGroupId == groupId;
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <div class="d-flex align-items-center w-100">
+                                        <button class="accordion-button @(isExpanded ? "" : "collapsed") flex-grow-1" type="button"
+                                                @onclick="() => ToggleGroup(groupId)">
+                                            <strong>@group.Name</strong>
+                                            <span class="badge bg-primary ms-2">@group.MockEndpoints.Count mocks</span>
+                                            <span class="badge bg-success ms-1">@activeMocks ativos</span>
+                                            @if (!string.IsNullOrWhiteSpace(group.Description))
+                                            {
+                                                <span class="text-muted ms-2 small">— @group.Description</span>
+                                            }
+                                        </button>
+                                        <div class="d-flex gap-1 me-3">
+                                            <button class="btn btn-sm btn-outline-success" title="Ativar todos os mocks"
+                                                    @onclick="() => ActivateGroup(group.Id)" @onclick:stopPropagation="true">
+                                                <i class="bi bi-toggle-on"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" title="Desativar todos os mocks"
+                                                    @onclick="() => DeactivateGroup(group.Id)" @onclick:stopPropagation="true">
+                                                <i class="bi bi-toggle-off"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-primary" title="Editar grupo"
+                                                    @onclick="() => NavigateToEditGroup(group.Id)" @onclick:stopPropagation="true">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" title="Duplicar grupo"
+                                                    @onclick="() => DuplicateGroup(group.Id)" @onclick:stopPropagation="true">
+                                                <i class="bi bi-copy"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-info" title="Novo mock neste grupo"
+                                                    @onclick="() => NavigateToCreateMockInGroup(group.Id)" @onclick:stopPropagation="true">
+                                                <i class="bi bi-plus-circle"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" title="Excluir grupo"
+                                                    @onclick="() => DeleteGroup(group.Id, group.Name)" @onclick:stopPropagation="true">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </h2>
+                                @if (isExpanded)
+                                {
+                                    <div class="accordion-collapse collapse show">
+                                        <div class="accordion-body p-0">
+                                            @if (!filteredMocks.Any())
+                                            {
+                                                <div class="p-3 text-muted">
+                                                    <i class="bi bi-info-circle"></i> Nenhum mock neste grupo corresponde aos filtros.
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Status</th>
+                                                                <th>Método</th>
+                                                                <th>Rota</th>
+                                                                <th>Código</th>
+                                                                <th>Descrição</th>
+                                                                <th>Chamadas</th>
+                                                                <th style="width:200px;">Ações</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var mock in filteredMocks)
+                                                            {
+                                                                <tr>
+                                                                    <td><span class="badge bg-@(mock.IsActive ? "success" : "secondary")">@(mock.IsActive ? "Ativo" : "Inativo")</span></td>
+                                                                    <td><span class="badge bg-@UiHelpers.GetMethodColor(mock.Method)">@mock.Method</span></td>
+                                                                    <td class="route-cell"><code>@mock.Route</code></td>
+                                                                    <td><span class="badge bg-@UiHelpers.GetStatusColor(mock.StatusCode)">@mock.StatusCode</span></td>
+                                                                    <td>@mock.Description</td>
+                                                                    <td><span class="badge bg-info">@mock.CallCount</span></td>
+                                                                    <td>
+                                                                        <div class="btn-group" role="group">
+                                                                            <button class="btn btn-sm btn-outline-primary" title="Editar" @onclick="() => NavigateToEdit(mock.Id)">
+                                                                                <i class="bi bi-pencil"></i>
+                                                                            </button>
+                                                                            <button class="btn btn-sm btn-outline-secondary" title="Duplicar" @onclick="() => DuplicateMock(mock.Id)">
+                                                                                <i class="bi bi-copy"></i>
+                                                                            </button>
+                                                                            <button class="btn btn-sm btn-outline-danger" title="Excluir" @onclick="() => DeleteMock(mock.Id)">
+                                                                                <i class="bi bi-trash"></i>
+                                                                            </button>
+                                                                            <button class="btn btn-sm btn-outline-info" title="Ver histórico" @onclick="() => ViewHistory(mock.Id)">
+                                                                                <i class="bi bi-clock-history"></i>
+                                                                            </button>
+                                                                            <button class="btn btn-sm btn-outline-warning" title="Remover do grupo" @onclick="() => RemoveFromGroup(mock.Id)">
+                                                                                <i class="bi bi-box-arrow-right"></i>
+                                                                            </button>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+

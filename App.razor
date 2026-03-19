@@ -1,0 +1,29 @@
+<CascadingAuthenticationState>
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+            <NotAuthorized>
+                @if (context.User.Identity?.IsAuthenticated != true)
+                {
+                    <RedirectToLogin />
+                }
+                else
+                {
+                    <p>Acesso negado.</p>
+                }
+            </NotAuthorized>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Não encontrado</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <div class="container py-5 text-center">
+                <h1 class="display-1">404</h1>
+                <p class="lead">Página não encontrada</p>
+                <a href="/" class="btn btn-primary">Voltar ao início</a>
+            </div>
+        </LayoutView>
+    </NotFound>
+</Router>
+</CascadingAuthenticationState>

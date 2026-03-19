@@ -1,0 +1,35 @@
+@page "/account/register-confirmation"
+@layout Savio.MockServer.Shared.AuthLayout
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+
+<PageTitle>Registro Confirmado - Savio Mock Server</PageTitle>
+
+<div class="card shadow" style="width: 100%; max-width: 420px;">
+    <div class="card-body p-4 text-center">
+        <i class="bi bi-envelope-check fs-1 text-success d-block mb-3"></i>
+        <h4>Conta Criada com Sucesso!</h4>
+
+        @if (AutoConfirmed == "true")
+        {
+            <p class="text-muted">
+                Sua conta foi criada e confirmada automaticamente.
+                Você já pode fazer login.
+            </p>
+        }
+        else
+        {
+            <p class="text-muted">
+                Um e-mail de confirmação foi enviado para <strong>@Email</strong>.
+            </p>
+            <p class="text-muted">
+                Verifique sua caixa de entrada (e spam) e clique no link para ativar sua conta.
+            </p>
+        }
+
+        <hr />
+        <a href="/account/login" class="btn btn-primary">
+            <i class="bi bi-box-arrow-in-right"></i> Ir para Login
+        </a>
+    </div>
+</div>

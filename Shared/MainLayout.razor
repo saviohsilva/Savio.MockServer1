@@ -1,0 +1,94 @@
+﻿@inherits LayoutComponentBase
+@using Blazored.Modal
+@using Blazored.Modal.Services
+
+<div class="page">
+    <div class="sidebar">
+        <div class="top-row ps-3 navbar navbar-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand d-flex align-items-center" href="">
+                    <img src="img/logo.svg" alt="Mock Server" width="28" height="28" class="me-2 sidebar-logo" />
+                    Mock Server
+                </a>
+                <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
+        </div>
+
+        <nav class="flex-column">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <span class="bi bi-house-door-fill" aria-hidden="true"></span> Dashboard
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="mock/create">
+                    <span class="bi bi-plus-circle-fill" aria-hidden="true"></span> Novo Mock
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="mocks">
+                    <span class="bi bi-collection" aria-hidden="true"></span> Gerenciar Mocks
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="historico">
+                    <span class="bi bi-clock-history" aria-hidden="true"></span> Histórico
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="unmocked">
+                    <span class="bi bi-exclamation-triangle" aria-hidden="true"></span> Não Mockadas
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="about">
+                    <span class="bi bi-info-circle" aria-hidden="true"></span> Sobre
+                </NavLink>
+            </div>
+        </nav>
+    </div>
+
+    <main>
+        <div class="top-row px-4 bg-light border-bottom d-flex justify-content-between">
+            <span class="text-muted small">
+                <i class="bi bi-server"></i> @serverUrl
+            </span>
+            <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label small text-muted mb-0"><i class="bi bi-palette"></i></label>
+                    <select class="form-select form-select-sm" style="width:auto;" @bind="currentTheme" @bind:after="OnThemeChanged">
+                        <option value="">Laranja (padrão)</option>
+                        <option value="dark-green">Preto e Verde</option>
+                        <option value="corporate-blue">Azul Corporativo</option>
+                    </select>
+                </div>
+                <AuthorizeView>
+                    <Authorized>
+                        <span class="text-muted small">
+                            <i class="bi bi-person-circle"></i> @context.User.Identity?.Name
+                        </span>
+                        <a href="/account/settings" class="btn btn-sm btn-outline-secondary" title="Configurações">
+                            <i class="bi bi-gear"></i>
+                        </a>
+                        <a href="/account/logout" class="btn btn-sm btn-outline-danger" title="Sair">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </a>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="/account/login" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-box-arrow-in-right"></i> Login
+                        </a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
+
+        <article class="content px-4">
+            <CascadingBlazoredModal>
+                @Body
+            </CascadingBlazoredModal>
+        </article>
+    </main>
+</div>

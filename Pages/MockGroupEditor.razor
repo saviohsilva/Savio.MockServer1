@@ -1,0 +1,188 @@
+@page "/group/create"
+@page "/group/edit/{Id:int}"
+@using Savio.MockServer.Services
+@using Savio.MockServer.Models
+@using Microsoft.AspNetCore.Identity
+@using Savio.MockServer.Data.Entities
+@inject MockService MockService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>@(IsEdit ? "Editar Grupo" : "Novo Grupo")</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>@(IsEdit ? "Editar Grupo" : "Novo Grupo")</h1>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-secondary" @onclick="Cancel">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Dados do Grupo -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Dados do Grupo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome do Grupo *</label>
+                        <input type="text" class="form-control" @bind="groupName" placeholder="Ex: Mock Teste Token GOV 01" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <input type="text" class="form-control" @bind="groupDescription" placeholder="Descrição do agrupamento" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(saveError))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> @saveError
+                        </div>
+                    }
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
+                        <button class="btn btn-primary" @onclick="SaveGroup">
+                            <i class="bi bi-save"></i> Salvar Grupo
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mocks do Grupo (somente na edição) -->
+            @if (IsEdit)
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Mocks do Grupo (@groupMocks.Count)</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (!groupMocks.Any())
+                        {
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle"></i> Nenhum mock neste grupo. Adicione mocks isolados abaixo.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Status</th>
+                                            <th>Método</th>
+                                            <th>Rota</th>
+                                            <th>Código</th>
+                                            <th>Descrição</th>
+                                            <th style="width:120px;">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var mock in groupMocks)
+                                        {
+                                            <tr>
+                                                <td><span class="badge bg-@(mock.IsActive ? "success" : "secondary")">@(mock.IsActive ? "Ativo" : "Inativo")</span></td>
+                                                <td><span class="badge bg-@UiHelpers.GetMethodColor(mock.Method)">@mock.Method</span></td>
+                                                <td><code>@mock.Route</code></td>
+                                                <td><span class="badge bg-@UiHelpers.GetStatusColor(mock.StatusCode)">@mock.StatusCode</span></td>
+                                                <td>@mock.Description</td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <button class="btn btn-sm btn-outline-primary" title="Editar" @onclick="() => EditMock(mock.Id)">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-warning" title="Remover do grupo" @onclick="() => RemoveFromGroup(mock.Id)">
+                                                            <i class="bi bi-box-arrow-right"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Adicionar mocks ao grupo -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Adicionar Mocks Isolados ao Grupo</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (!availableMocks.Any())
+                        {
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle"></i> Não há mocks isolados disponíveis para adicionar.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Status</th>
+                                            <th>Método</th>
+                                            <th>Rota</th>
+                                            <th>Descrição</th>
+                                            <th style="width:80px;">Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var mock in availableMocks)
+                                        {
+                                            <tr>
+                                                <td><span class="badge bg-@(mock.IsActive ? "success" : "secondary")">@(mock.IsActive ? "Ativo" : "Inativo")</span></td>
+                                                <td><span class="badge bg-@UiHelpers.GetMethodColor(mock.Method)">@mock.Method</span></td>
+                                                <td><code>@mock.Route</code></td>
+                                                <td>@mock.Description</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-success" title="Adicionar ao grupo" @onclick="() => AddToGroup(mock.Id)">
+                                                        <i class="bi bi-plus-circle"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h6 class="mb-0">💡 Dicas</h6>
+                </div>
+                <div class="card-body">
+                    <h6>Agrupamentos</h6>
+                    <p class="small">Agrupe mocks por cenário de teste. Ex: "Token GOV", "Fluxo de Pagamento".</p>
+
+                    <hr />
+
+                    <h6>Regras</h6>
+                    <ul class="small">
+                        <li>O nome do grupo deve ser <strong>único</strong>.</li>
+                        <li>Ao excluir um grupo, os mocks são desvinculados (não excluídos).</li>
+                        <li>Apenas <strong>um mock ativo</strong> por rota+método em todo o sistema.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* code-behind: MockGroupEditor.razor.cs *@

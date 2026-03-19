@@ -1,0 +1,195 @@
+@page "/about"
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+
+<PageTitle>Sobre - Savio Mock Server</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+
+            <!-- Cabeçalho -->
+            <div class="text-center mb-5">
+                <img src="img/logo.svg" alt="Mock Server" width="80" height="80" class="mb-3" />
+                <h1 class="display-5 fw-bold">Savio Mock Server</h1>
+                <p class="lead text-muted">Servidor de mock de APIs HTTP com interface visual, autenticação e isolamento por usuário.</p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap mt-3">
+                    <span class="badge bg-primary p-2"><i class="bi bi-microsoft"></i> .NET 8</span>
+                    <span class="badge bg-success p-2"><i class="bi bi-lightning"></i> Blazor Server</span>
+                    <span class="badge bg-info p-2"><i class="bi bi-database"></i> EF Core 8</span>
+                    <span class="badge bg-secondary p-2"><i class="bi bi-shield-lock"></i> ASP.NET Identity</span>
+                    <span class="badge bg-warning text-dark p-2"><i class="bi bi-bootstrap"></i> Bootstrap 5</span>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+
+                <!-- Funcionalidades -->
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-card-checklist me-2"></i>Funcionalidades</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Criação visual de mocks</strong> — método HTTP, rota, status code, headers e body</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Multi-usuário com isolamento</strong> — cada conta tem um alias único</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Grupos de mocks</strong> — ative/desative cenários inteiros de uma vez</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Histórico de requisições</strong> — headers, body, status e timestamps</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Requisições não mockadas</strong> — capturadas automaticamente para criação rápida</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Respostas binárias</strong> — imagens, PDFs e outros arquivos</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Multipart/form-data</strong> — suporte completo a respostas multipart</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Delay configurável</strong> — simule latência real por endpoint</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Dashboard com métricas</strong> — total de chamadas e último acesso em tempo real</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Fuso horário do navegador</strong> — timestamps exibidos na hora local do cliente</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>3 temas visuais</strong> — Laranja (padrão), Preto e Verde, Azul Corporativo</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Segurança e Autenticação -->
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Segurança e Autenticação</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2"><i class="bi bi-person-check text-primary me-2"></i><strong>Registro e login</strong> — e-mail + alias + senha (mínimo 6 caracteres)</li>
+                                <li class="mb-2"><i class="bi bi-envelope-check text-primary me-2"></i><strong>Confirmação de e-mail</strong> — via SMTP ou automática (sem SMTP configurado)</li>
+                                <li class="mb-2"><i class="bi bi-shield-fill text-warning me-2"></i><strong>MFA — TOTP</strong> — Google Authenticator, Microsoft Authenticator, Authy</li>
+                                <li class="mb-2"><i class="bi bi-shield-fill text-warning me-2"></i><strong>MFA — E-mail</strong> — código de verificação enviado a cada login</li>
+                                <li class="mb-2"><i class="bi bi-lock-fill text-danger me-2"></i><strong>Lockout automático</strong> — conta bloqueada após 5 tentativas falhas (5 min)</li>
+                                <li class="mb-2"><i class="bi bi-person-gear text-info me-2"></i><strong>Gerenciamento de alias</strong> — alteração com aviso de impacto nas URLs</li>
+                                <li class="mb-2"><i class="bi bi-key text-success me-2"></i><strong>Códigos de recuperação</strong> — 10 códigos de uso único gerados no setup do MFA</li>
+                                <li class="mb-2"><i class="bi bi-https text-success me-2"></i><strong>HTTPS nativo</strong> — Kestrel com redirecionamento automático HTTP → HTTPS</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+
+                <!-- Como Usar -->
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-play-circle me-2"></i>Como Usar</h5>
+                        </div>
+                        <div class="card-body">
+                            <ol class="mb-3">
+                                <li class="mb-1">Crie sua conta com e-mail, alias e senha</li>
+                                <li class="mb-1">No dashboard, clique em <strong>Novo Mock</strong></li>
+                                <li class="mb-1">Configure método, rota, status code e body</li>
+                                <li class="mb-1">Salve e acesse via URL com seu alias</li>
+                            </ol>
+                            <p class="mb-1"><strong>Formato da URL:</strong></p>
+                            <code class="d-block bg-body-secondary rounded px-2 py-1 mb-3">@BaseUrl/<em>seu-alias</em>/<em>rota</em></code>
+                            <p class="mb-1"><strong>Exemplo:</strong></p>
+                            <code class="d-block bg-body-secondary rounded px-2 py-1">@BaseUrl/meuhost/api/users</code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stack Técnica -->
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-stack me-2"></i>Stack Técnica</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm mb-0">
+                                <tbody>
+                                    <tr><td><strong>Runtime</strong></td><td>.NET 8, C# 12</td></tr>
+                                    <tr><td><strong>UI</strong></td><td>Blazor Server</td></tr>
+                                    <tr><td><strong>Padrão</strong></td><td>Code-behind (<code>.razor.cs</code>)</td></tr>
+                                    <tr><td><strong>Auth</strong></td><td>ASP.NET Identity</td></tr>
+                                    <tr><td><strong>ORM</strong></td><td>Entity Framework Core 8</td></tr>
+                                    <tr><td><strong>Banco</strong></td><td>SQLite · MySQL · SQL Server</td></tr>
+                                    <tr><td><strong>CSS</strong></td><td>Bootstrap 5 + Bootstrap Icons</td></tr>
+                                    <tr><td><strong>Modais</strong></td><td>Blazored.Modal + Blazored.Toast</td></tr>
+                                    <tr><td><strong>Servidor</strong></td><td>Kestrel (HTTP + HTTPS)</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+
+                <!-- Banco de Dados -->
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-database me-2"></i>Banco de Dados</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Suporte a 3 provedores configuráveis em <code>appsettings.json</code>:</p>
+                            <ul class="mb-2">
+                                <li><strong>SQLite</strong> — padrão, sem instalação adicional</li>
+                                <li><strong>MySQL</strong> — via Pomelo.EntityFrameworkCore.MySql</li>
+                                <li><strong>SQL Server</strong> — via Microsoft.EntityFrameworkCore.SqlServer</li>
+                            </ul>
+                            <p class="mb-0 text-muted small">As migrations são aplicadas automaticamente na inicialização.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Health Check -->
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-activity me-2"></i>API de Health Check</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Endpoint público para monitoramento:</p>
+                            <code class="d-block bg-body-secondary rounded px-2 py-1 mb-3">GET @BaseUrl/_health</code>
+                            <p class="mb-1"><strong>Resposta:</strong></p>
+                            <pre class="bg-body-secondary rounded p-2 mb-0 small">&#123;
+  "status": "healthy",
+  "timestamp": "2024-01-01T00:00:00Z",
+  "mocksCount": 42
+&#125;</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contato -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-person-circle me-2"></i>Autor</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1"><strong>Sávio Henrique da Silva</strong></p>
+                    <p class="mb-1">
+                        <i class="bi bi-github me-2"></i>
+                        <a href="https://github.com/saviohsilva" target="_blank" rel="noopener">github.com/saviohsilva</a>
+                    </p>
+                    <p class="mb-1">
+                        <i class="bi bi-linkedin me-2"></i>
+                        <a href="https://www.linkedin.com/in/saviohenriquesilva" target="_blank" rel="noopener">linkedin.com/in/saviohenriquesilva</a>
+                    </p>
+                    <p class="mb-0">
+                        <i class="bi bi-envelope me-2"></i>
+                        <a href="mailto:savioh.silva@outlook.com.br">savioh.silva@outlook.com.br</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Licença -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Licença</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">Este projeto está licenciado sob a <strong>MIT License</strong> — livre para uso, modificação e distribuição.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

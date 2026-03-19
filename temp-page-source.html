@@ -1,0 +1,72 @@
+﻿
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Savio Mock Server - Gerencie seus endpoints mockados de forma visual e interativa" />
+    <meta name="author" content="Evertec" />
+    <base href="/" />
+    <title>Savio Mock Server</title>
+    
+    <!-- Bootstrap CSS (offline) -->
+    <link href="lib/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="lib/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet" />
+    
+    <!-- Estilos customizados (ordem importa!) -->
+    <link href="css/theme.css" rel="stylesheet" />
+    <link href="css/layout.css" rel="stylesheet" />
+    <link href="css/components.css" rel="stylesheet" />
+    <link href="css/utilities.css" rel="stylesheet" />
+    <link href="css/site.css" rel="stylesheet" />
+    
+    <!--Blazor:{"type":"server","prerenderId":"12e820d439204028b7a8690b81505540","key":{"locationHash":"77D12F14A8105320B1AAED6AE7E689DA0EC4483270A645E84079EAA0FFDF550D:0","formattedComponentKey":""},"sequence":0,"descriptor":"CfDJ8F0powsioQpFllyITOEV1IuXigkMkDlMTdFf9N5cCIDeBJnq4ZUYVHU\u002BJtplLEfuPUWGag9a17QvZKLfjhusREOwVJX/y6/qSpV8fE1tg2QgsmB/nexpva\u002B\u002BIb/\u002BDtpP4xbyYZtKAiRWc11NRFanaEsCphT7UU4dVhhLFDU\u002BZ5TOkZ96ndZcnyMYrX4DU5mMPBGfajIIu9SgQ\u002Bq1iAfxmnPjoTpg7G79YSVrXkCOtsOqgGT0xkJ9dwt4pz6U89D\u002BVXDUwGD29wGBHTvBxLkqda\u002BPeJgWKP7w8hhl2a4kdcS/Xtv57pLMBTiQ124nX8/38NLahR6AXW4Rye0UIyuDmxnauvqitSSBF5L2LCIxAktOiK4FUL7QbAtOEovq266osIdT4BJ3RSBzmwsckW0Swj0UAxUbOsnVEilFLBT0lhzMEoTP/JzKW7HDyvFQpEZCEBq9DzYgiPxzMce22dfgJ1BJbUa21vBHs1ezsCWZBnolHzSTWfzO1Uf7wecksW6YuMtykCpWHi\u002BB0QR8tTtwgqItuwfcZzlYQKAR20yPc7n0MmI23qTbrMgTIKMoiILi\u002BY08/wXMsHkqaftIaixNGIU="}--><title>Mock Server - Dashboard</title><!--Blazor:{"prerenderId":"12e820d439204028b7a8690b81505540"}-->
+</head>
+<body>
+    <!--Blazor:{"type":"server","prerenderId":"158f2eed3bc0442fb35913811c3e533b","key":{"locationHash":"E6FC14F93F4EFD42597F450136C1125A03918BE9A13679A65B5F17B64E9F6D17:0","formattedComponentKey":""},"sequence":1,"descriptor":"CfDJ8F0powsioQpFllyITOEV1Iu1qwwL8c46fBNtj56xPISL3ps7EbWpFs7CrJQ0dsNxCxPcXHrHWe/gdYZsd28767id/Q7IUj4xAoTkvBH\u002BrDH165sJn7EKX7wccwO0iu\u002BMu2593Q3JIEDZv3\u002BOWoddUuVMvfzfjP/WLE8qmbWwaWe12uTTGzWyGQ701CmXTbJOkQyGblagZnMpH9WPUYwDyA7JSQQSIDCel5zwL0Wo\u002Bph9hSurZ\u002BOVBcLEcBSBUaBM9AOsNXfGu/BWeXGYK1BOYw/jVeB32nfs65NCYTSQAsT1N4XFHHKVIiXM6aqkWXYeCbZTOftCVbkgso5BVLjXix1xX6eGRnsx/4sQwoVfvNSljSJS4LBac8j/k1qjBc6He4ShYK6eDtI4uD7IuUuqWNsbzoGnow4\u002BksTU/RTG1AH8HP974WNi6sI4muSpDQXZAlfa6UcljyAreJHEqB/X\u002BSVFqziSvXn7C1p3S9A\u002BuXdiIG7eb3jp\u002BuNcxnM\u002BhKincO950/HUjx9VUerDljylzbk="}--><div class="page"><div class="sidebar"><div class="top-row ps-3 navbar navbar-dark"><div class="container-fluid"><a class="navbar-brand" href>?? Mock Server</a>
+                <button title="Navigation menu" class="navbar-toggler"><span class="navbar-toggler-icon"></span></button></div></div>
+
+        <nav class="flex-column"><div class="nav-item px-3"><a href="" class="nav-link active" aria-current="page"><span class="bi bi-house-door-fill" aria-hidden="true"></span> Dashboard
+                </a></div>
+            <div class="nav-item px-3"><a href="mock/create" class="nav-link"><span class="bi bi-plus-circle-fill" aria-hidden="true"></span> Novo Mock
+                </a></div></nav></div>
+
+    <main><div class="top-row px-4 bg-light border-bottom"><span class="text-muted small"><i class="bi bi-server"></i> localhost:5100
+            </span></div>
+
+        <article class="content px-4">
+
+<div class="container-fluid py-4"><div class="row mb-4"><div class="col"><h1 class="display-4">?? Savio Mock Server</h1>
+            <p class="lead">Gerencie seus endpoints mockados de forma visual e interativa</p></div>
+        <div class="col-auto"><button class="btn btn-primary btn-lg"><i class="bi bi-plus-circle"></i> Novo Mock
+            </button></div></div>
+
+    <div class="row mb-4"><div class="col-md-3"><div class="card bg-primary text-white"><div class="card-body"><h5 class="card-title">Total de Mocks</h5>
+                    <h2>0</h2></div></div></div>
+        <div class="col-md-3"><div class="card bg-success text-white"><div class="card-body"><h5 class="card-title">Ativos</h5>
+                    <h2>0</h2></div></div></div>
+        <div class="col-md-3"><div class="card bg-info text-white"><div class="card-body"><h5 class="card-title">Total de Chamadas</h5>
+                    <h2>0</h2></div></div></div>
+        <div class="col-md-3"><div class="card bg-warning text-white"><div class="card-body"><h5 class="card-title">Último Acesso</h5>
+                    <h2>Nunca</h2></div></div></div></div>
+
+    <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h5 class="mb-0">Mocks Cadastrados</h5></div>
+                <div class="card-body"><div class="alert alert-info"><i class="bi bi-info-circle"></i> Nenhum mock cadastrado. Clique em "Novo Mock" para começar.
+                        </div></div></div></div></div></div></article></main></div>
+        <!--Blazor:{"prerenderId":"158f2eed3bc0442fb35913811c3e533b"}-->
+
+    <div id="blazor-error-ui">
+        
+        
+            Um erro não tratado foi lançado. <a href="" class="reload">Recarregar</a>
+        
+        <a class="dismiss">?</a>
+    </div>
+
+    <!-- Scripts -->
+    <script src="_framework/blazor.server.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
+
+

@@ -1,0 +1,45 @@
+/* ========================================
+   Savio MOCK SERVER - ESTILOS PRINCIPAIS
+   
+   Estrutura modular:
+   - theme.css: Variáveis e tema Evertec
+   - layout.css: Estrutura de layout e grid
+   - components.css: Componentes reutilizáveis
+   - utilities.css: Classes utilitárias
+   ======================================== */
+
+/* Estilos base */
+* {
+    box-sizing: border-box;
+    transition-property: background-color, border-color, color;
+    transition-duration: 0.2s;
+    transition-timing-function: ease-in-out;
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+}
+
+/* Focus visible para acessibilidade */
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid var(--color-primary, #FF6A00);
+    outline-offset: 2px;
+}
+
+/* Exceções de transição - elementos interativos */
+button,
+a,
+.btn,
+.nav-link {
+    transition-property: all;
+}
+

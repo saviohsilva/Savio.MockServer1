@@ -1,0 +1,17 @@
+<div class="row g-2">
+    <div class="col-12 col-md-6">
+        <label class="form-label small text-muted">De</label>
+        <input class="form-control form-control-sm" type="datetime-local" value="@fromText" @oninput="@OnFromInput" />
+    </div>
+    <div class="col-12 col-md-6">
+        <label class="form-label small text-muted">Até</label>
+        <input class="form-control form-control-sm" type="datetime-local" value="@toText" @oninput="@OnToInput" />
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(validationMessage))
+{
+    <div class="alert alert-warning py-2 mt-2 mb-0">
+        <i class="bi bi-exclamation-triangle"></i> @validationMessage
+    </div>
+}

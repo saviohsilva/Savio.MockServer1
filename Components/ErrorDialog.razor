@@ -1,0 +1,14 @@
+<div class="text-center">
+    <i class="bi bi-exclamation-triangle fs-1 text-danger d-block mb-3"></i>
+    <p>@Message</p>
+    @if (Details?.Any() == true)
+    {
+        <ul class="text-start small">
+            @foreach (var detail in Details)
+            {
+                <li>@detail</li>
+            }
+        </ul>
+    }
+    <button class="btn btn-secondary" @onclick="Close">Fechar</button>
+</div>

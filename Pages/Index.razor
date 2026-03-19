@@ -1,0 +1,146 @@
+@page "/"
+@using Savio.MockServer.Services
+@using Savio.MockServer.Models
+@using Savio.MockServer.Components
+@using Microsoft.AspNetCore.Identity
+@using Savio.MockServer.Data.Entities
+@inject MockService MockService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Mock Server - Dashboard</PageTitle>
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-4">
+                <img src="img/logo.svg" alt="Mock Server" width="48" height="48" class="me-2" style="vertical-align: middle;" />
+                Mock Server
+            </h1>
+            <p class="lead">Gerencie seus endpoints mockados de forma visual e interativa</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary btn-lg" @onclick="NavigateToCreate">
+                <i class="bi bi-plus-circle"></i> Novo Mock
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total de Mocks</h5>
+                    <h2>@mocks.Count</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Ativos</h5>
+                    <h2>@mocks.Count(m => m.IsActive)</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total de Chamadas</h5>
+                    <h2>@mocks.Sum(m => m.CallCount)</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Último Acesso</h5>
+                    <h2>@(mocks.Any(m => m.LastCalledAt.HasValue)
+                        ? TimezoneService.FormatLocalTime(mocks.Where(m => m.LastCalledAt.HasValue).Max(m => m.LastCalledAt), "HH:mm:ss")
+                        : "Nunca")</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Mocks Cadastrados</h5>
+                </div>
+                <div class="card-body">
+                    @if (!mocks.Any())
+                    {
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Nenhum mock cadastrado. Clique em "Novo Mock" para começar.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Método</th>
+                                        <th>Rota</th>
+                                        <th>Código HTTP</th>
+                                        <th>Descrição</th>
+                                        <th>Chamadas</th>
+                                        <th>Último Acesso</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var mock in mocks.OrderByDescending(m => m.CreatedAt))
+                                    {
+                                        <tr>
+                                            <td>
+                                                @if (mock.IsActive)
+                                                {
+                                                    <span class="badge bg-success">Ativo</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">Inativo</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-@UiHelpers.GetMethodColor(mock.Method)">@mock.Method</span>
+                                            </td>
+                                            <td><code>@mock.Route</code></td>
+                                            <td><span class="badge bg-@UiHelpers.GetStatusColor(mock.StatusCode)">@mock.StatusCode</span></td>
+                                            <td>@mock.Description</td>
+                                            <td><span class="badge bg-info">@mock.CallCount</span></td>
+                                            <td>@TimezoneService.FormatLocalTime(mock.LastCalledAt, "dd/MM HH:mm:ss")</td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                     <button class="btn btn-sm btn-outline-primary" title="Editar" @onclick="() => NavigateToEdit(mock.Id)">
+                                                         <i class="bi bi-pencil"></i>
+                                                     </button>
+                                                     <button class="btn btn-sm btn-outline-secondary" title="Duplicar" @onclick="() => DuplicateMock(mock.Id)">
+                                                         <i class="bi bi-copy"></i>
+                                                     </button>
+                                                     <button class="btn btn-sm btn-outline-danger" title="Excluir" @onclick="() => DeleteMock(mock.Id)">
+                                                         <i class="bi bi-trash"></i>
+                                                     </button>
+                                                     <button class="btn btn-sm btn-outline-info" title="Ver histórico" @onclick="() => ViewHistory(mock.Id)">
+                                                         <i class="bi bi-clock-history"></i>
+                                                     </button>
+                                                     <button class="btn btn-sm btn-outline-info" title="Testar" @onclick="() => TestMock(mock)">
+                                                         <i class="bi bi-play"></i>
+                                                     </button>
+                                                 </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Outer shield shape -->
+  <path d="M32 4 L56 16 V36 C56 48 44 58 32 62 C20 58 8 48 8 36 V16 Z"
+        fill="#ff6b35" stroke="#e85d2c" stroke-width="1.5"/>
+  <!-- Inner highlight -->
+  <path d="M32 8 L52 18 V36 C52 46 42 54 32 58 C22 54 12 46 12 36 V18 Z"
+        fill="#ff8c5a" opacity="0.3"/>
+  <!-- Stylized M letter -->
+  <path d="M20 44 V24 L28 36 L32 30 L36 36 L44 24 V44"
+        stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- API dot nodes -->
+  <circle cx="20" cy="20" r="3" fill="white" opacity="0.9"/>
+  <circle cx="44" cy="20" r="3" fill="white" opacity="0.9"/>
+  <circle cx="32" cy="14" r="3" fill="white" opacity="0.9"/>
+  <!-- Connection lines between dots -->
+  <line x1="20" y1="20" x2="32" y2="14" stroke="white" stroke-width="1.5" opacity="0.6"/>
+  <line x1="44" y1="20" x2="32" y2="14" stroke="white" stroke-width="1.5" opacity="0.6"/>
+</svg>
