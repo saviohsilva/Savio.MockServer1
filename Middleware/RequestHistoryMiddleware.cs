@@ -85,6 +85,7 @@ public class RequestHistoryMiddleware
                     MockEndpointId = mock.Id,
                     Method = context.Request.Method,
                     Route = context.Request.Path,
+                    QueryString = context.Request.QueryString.HasValue ? context.Request.QueryString.Value : null,
                     RequestHeadersJson = JsonSerializer.Serialize(
                         context.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString())),
                     RequestBody = capturedRequest.TextBody,

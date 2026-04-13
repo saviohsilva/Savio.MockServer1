@@ -2,6 +2,7 @@ using Savio.MockServer.Services;
 using Savio.MockServer.Data.Repositories;
 using Savio.MockServer.Data.Entities;
 using Savio.MockServer.Data;
+using Savio.MockServer.Helpers;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
 using System.Text.Json;
@@ -131,7 +132,12 @@ public class MockEndpointMiddleware
         var mock = mocks.FirstOrDefault(m =>
             m.Route.Equals(mockRoute, StringComparison.OrdinalIgnoreCase) &&
             m.Method.Equals(method, StringComparison.OrdinalIgnoreCase) &&
-            m.IsActive);
+            m.IsActive)
+            ?? mocks.FirstOrDefault(m =>
+                m.Method.Equals(method, StringComparison.OrdinalIgnoreCase) &&
+                m.IsActive &&
+                RouteTemplateHelper.HasRouteParameters(m.Route) &&
+                RouteTemplateHelper.MatchesTemplate(m.Route, mockRoute));
 
         if (mock != null)
         {
@@ -268,6 +274,7 @@ public class MockEndpointMiddleware
                         MockEndpointId = mockEntity.Id,
                         Method = context.Request.Method,
                         Route = context.Request.Path,
+                        QueryString = context.Request.QueryString.HasValue ? context.Request.QueryString.Value : null,
                         RequestHeadersJson = JsonSerializer.Serialize(
                             context.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString())),
                         RequestBody = capturedRequest.TextBody,

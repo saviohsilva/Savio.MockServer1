@@ -25,7 +25,7 @@
                         <table class="table table-sm mb-0">
                             <tbody>
                                 <tr>
-                                    <td class="fw-bold" style="width:200px;">E-mail</td>
+                                    <td class="fw-bold td-label">E-mail</td>
                                     <td>@user.Email</td>
                                 </tr>
                                 <tr>
@@ -34,7 +34,7 @@
                                         <div class="d-flex align-items-center gap-2">
                                             @if (isEditingAlias)
                                             {
-                                                <div class="input-group" style="max-width: 350px;">
+                                                <div class="input-group input-group-limited">
                                                     <span class="input-group-text">/</span>
                                                     <input type="text" class="form-control form-control-sm"
                                                            @bind="newAlias" @bind:event="oninput"

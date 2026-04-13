@@ -142,7 +142,7 @@
                         <table class="table table-hover mb-0">
                             <thead>
                                 <tr>
-                                    <th style="width:40px;">
+                                    <th class="col-th-40">
                                         <input type="checkbox" class="form-check-input" @onchange="ToggleSelectAllMocks"
                                                checked="@(selectedMocks.Count == sortedMocks.Count && sortedMocks.Any())" />
                                     </th>
@@ -167,7 +167,7 @@
                                     <th role="button" @onclick='() => ToggleSort("calls")'>
                                         Chamadas <i class="bi @GetSortIcon("calls")"></i>
                                     </th>
-                                    <th style="width:200px;">Ações</th>
+                                    <th class="col-th-200">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -308,7 +308,7 @@
                                                                 <th>Código</th>
                                                                 <th>Descrição</th>
                                                                 <th>Chamadas</th>
-                                                                <th style="width:200px;">Ações</th>
+                                                                <th class="col-th-200">Ações</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>

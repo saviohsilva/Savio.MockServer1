@@ -18,7 +18,7 @@
             <p class="lead">Total de @totalCount requisições registradas</p>
         </div>
         <div class="col-auto">
-            <select class="form-select form-select-sm me-2" style="width: auto; display: inline-block;" @bind="pageSize" @bind:after="OnPageSizeChanged">
+            <select class="form-select form-select-sm me-2 w-auto d-inline-block" @bind="pageSize" @bind:after="OnPageSizeChanged">
                 <option value="50">50 por página</option>
                 <option value="100">100 por página</option>
                 <option value="200">200 por página</option>
@@ -138,7 +138,7 @@
                         <th>Delay</th>
                         <th>IP</th>
                         <th>Mock</th>
-                        <th style="width: 140px;">Ações</th>
+                        <th class="col-th-140">Ações</th>
                     </tr>
                 </thead>
                 <tbody>

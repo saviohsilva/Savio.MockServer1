@@ -96,7 +96,7 @@
 
                         <div class="mb-3">
                             <label class="form-label">Digite o código gerado pelo app:</label>
-                            <input type="text" class="form-control text-center fs-4" style="max-width:200px;"
+                            <input type="text" class="form-control text-center fs-4 input-code"
                                    @bind="verificationCode" placeholder="000000" maxlength="7" />
                         </div>
 
@@ -133,7 +133,7 @@
                             <p class="text-success"><i class="bi bi-check-circle"></i> Código enviado para seu e-mail! Verifique sua caixa de entrada.</p>
                             <div class="mb-3">
                                 <label class="form-label">Digite o código recebido por e-mail:</label>
-                                <input type="text" class="form-control text-center fs-4" style="max-width:200px;"
+                                <input type="text" class="form-control text-center fs-4 input-code"
                                        @bind="verificationCode" placeholder="000000" maxlength="7" />
                             </div>
                             <button class="btn btn-primary" @onclick="EnableMfaEmail" disabled="@isLoading">

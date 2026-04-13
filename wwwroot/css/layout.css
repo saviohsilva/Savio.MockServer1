@@ -223,3 +223,60 @@ main {
 .footer-copyright a:hover {
     text-decoration: underline;
 }
+
+/* ========================================
+   AUTENTICAÇÃO
+   ======================================== */
+
+.auth-layout-bg {
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-dark-secondary) 100%);
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+}
+
+.auth-card-wide {
+    width: 100%;
+    max-width: 480px;
+}
+
+/* ========================================
+   TABELAS — COLUNAS COM LARGURA FIXA
+   ======================================== */
+
+.table-fixed {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.col-th-40    { width: 40px; }
+.col-th-140   { width: 140px; }
+.col-th-180   { width: 180px; }
+.col-th-200   { width: 200px; }
+.col-th-220   { width: 220px; }
+.col-th-40pct { width: 40%; }
+
+/* Células com overflow controlado */
+.td-clamp     { max-width: 0; }
+.td-break-all { max-width: 0; word-break: break-all; }
+
+/* Coluna label em tabelas de informações */
+.td-label { width: 200px; }
+
+/* ========================================
+   PRE / CODE BLOCKS — ALTURA MÁXIMA
+   ======================================== */
+
+.pre-scroll-200 { max-height: 200px; overflow: auto; }
+.pre-scroll-400 { max-height: 400px; overflow: auto; }
+.pre-scroll-500 { max-height: 500px; overflow: auto; }
+
+/* ========================================
+   FORM CONTROLS
+   ======================================== */
+
+.input-group-limited { max-width: 350px; }
+.input-code          { max-width: 200px; }

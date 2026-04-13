@@ -16,7 +16,10 @@ public class RequestHistoryEntity
     [Required]
     [MaxLength(500)]
     public string Route { get; set; } = string.Empty;
-    
+
+    [MaxLength(2000)]
+    public string? QueryString { get; set; }
+
     public string? RequestHeadersJson { get; set; }
     
     // Texto (json/raw) quando aplicável

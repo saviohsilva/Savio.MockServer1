@@ -18,7 +18,8 @@ public partial class HistoricoDetalhes
     private RequestHistoryEntity? history;
     private Dictionary<string, string>? requestHeaders;
     private Dictionary<string, string>? responseHeaders;
-    private byte[]? responseBlobContent;
+    private Dictionary<string, string>? queryParams;
+    private byte[]? responseBlobContent = null;
     private bool loadingBlobContent = false;
 
     protected override async Task OnInitializedAsync()
@@ -36,6 +37,10 @@ public partial class HistoricoDetalhes
                 if (!string.IsNullOrEmpty(history.ResponseHeadersJson))
                 {
                     responseHeaders = JsonSerializer.Deserialize<Dictionary<string, string>>(history.ResponseHeadersJson);
+                }
+                if (!string.IsNullOrEmpty(history.QueryString))
+                {
+                    queryParams = ParseQueryString(history.QueryString);
                 }
             }
             catch
@@ -96,6 +101,25 @@ public partial class HistoricoDetalhes
     private void VoltarParaLista()
     {
         Navigation.NavigateTo("/historico");
+    }
+
+    private static Dictionary<string, string> ParseQueryString(string qs)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (qs.StartsWith('?')) qs = qs[1..];
+        foreach (var part in qs.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var idx = part.IndexOf('=');
+            if (idx > 0)
+            {
+                result[Uri.UnescapeDataString(part[..idx])] = Uri.UnescapeDataString(part[(idx + 1)..]);
+            }
+            else
+            {
+                result[Uri.UnescapeDataString(part)] = string.Empty;
+            }
+        }
+        return result;
     }
 
     private async Task LoadResponseBlobContent()
