@@ -58,7 +58,7 @@
 
         <div class="row">
             <!-- Informações Gerais -->
-            <div class="col-lg-6 mb-4">
+            <div class="col-12 mb-4">
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">ℹ️ Informações Gerais</h5>
@@ -95,223 +95,230 @@
                 </div>
             </div>
 
-            <!-- Request Headers -->
-            <div class="col-lg-6 mb-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">📤 Request Headers</h5>
-                    </div>
-                    <div class="card-body">
-                        @if (requestHeaders != null && requestHeaders.Any())
-                        {
-                            <div class="table-responsive">
-                            <table class="table table-sm table-hover table-fixed">
-                                <thead>
-                                    <tr>
-                                        <th class="col-th-40pct">Header</th>
-                                        <th>Valor</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var header in requestHeaders.OrderBy(h => h.Key))
-                                    {
-                                        <tr>
-                                            <td class="text-truncate td-clamp"><strong>@header.Key</strong></td>
-                                            <td class="text-break td-break-all"><code class="small">@header.Value</code></td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                            </div>
-                        }
-                        else
-                        {
-                            <p class="text-muted">Nenhum header</p>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
+            <!-- Coluna Esquerda: Request -->
+            <div class="col-lg-6">
 
-        @if (queryParams != null && queryParams.Any())
-        {
-            <div class="mb-4 col-half">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">🔎 Query Params</h5>
-                    </div>
-                    <div class="card-body">
-                        <table class="table table-sm table-hover">
-                                <thead>
-                                    <tr>
-                                        <th class="col-th-220">Parâmetro</th>
-                                        <th>Valor</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var param in queryParams)
-                                    {
-                                        <tr>
-                                            <td><strong>@param.Key</strong></td>
-                                            <td><code class="small">@param.Value</code></td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                    </div>
-                </div>
-            </div>
-        }
-
-        <div class="row">
-            <!-- Request Body -->
-            <div class="col-lg-6 mb-4">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">📥 Request Body</h5>
-                        @if (!string.IsNullOrEmpty(history.RequestBody))
-                        {
-                            <button class="btn btn-sm btn-outline-primary" @onclick="() => CopyToClipboard(history.RequestBody)">
-                                <i class="bi bi-clipboard"></i> Copiar
-                            </button>
-                        }
-                    </div>
-                    <div class="card-body">
-                        @if (!string.IsNullOrEmpty(history.RequestFormJson))
-                        {
-                            <h6 class="text-muted">Form/MultiPart (normalizado)</h6>
-                            <pre class="bg-light p-3 rounded pre-scroll-400"><code>@UiHelpers.FormatJson(history.RequestFormJson)</code></pre>
-                        }
-                        else if (!string.IsNullOrEmpty(history.RequestBody))
-                        {
-                            <pre class="bg-light p-3 rounded pre-scroll-400"><code>@UiHelpers.FormatJson(history.RequestBody)</code></pre>
-                        }
-                        else if (!string.IsNullOrEmpty(history.RequestBodyBase64))
-                        {
-                            <p class="text-muted">Request binário capturado (Base64) - ContentType: <code>@history.RequestBodyContentType</code></p>
-                            <pre class="bg-light p-3 rounded pre-scroll-200"><code>@history.RequestBodyBase64</code></pre>
-                        }
-                        else
-                        {
-                            <p class="text-muted">Vazio</p>
-                        }
-                    </div>
-                </div>
-            </div>
-
-            <!-- Response Headers -->
-            <div class="col-lg-6 mb-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">📥 Response Headers</h5>
-                    </div>
-                    <div class="card-body">
-                        @if (responseHeaders != null && responseHeaders.Any())
-                        {
-                            <div class="table-responsive">
-                            <table class="table table-sm table-hover table-fixed">
-                                <thead>
-                                    <tr>
-                                        <th class="col-th-40pct">Header</th>
-                                        <th>Valor</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var header in responseHeaders.OrderBy(h => h.Key))
-                                    {
-                                        <tr>
-                                            <td class="text-truncate td-clamp"><strong>@header.Key</strong></td>
-                                            <td class="text-break td-break-all"><code class="small">@header.Value</code></td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                            </div>
-                        }
-                        else
-                        {
-                            <p class="text-muted">Nenhum header</p>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <!-- Response Body -->
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">📤 Response Body</h5>
-                        <div class="d-flex gap-2">
-                            @if (!string.IsNullOrEmpty(history.ResponseBody) && !history.ResponseBody.StartsWith("[Response"))
+                <!-- Request Headers -->
+                <div class="mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">📤 Request Headers</h5>
+                        </div>
+                        <div class="card-body">
+                            @if (requestHeaders != null && requestHeaders.Any())
                             {
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => CopyToClipboard(history.ResponseBody)">
-                                    <i class="bi bi-clipboard"></i> Copiar
-                                </button>
+                                <div class="table-responsive">
+                                <table class="table table-sm table-hover table-fixed">
+                                    <thead>
+                                        <tr>
+                                            <th class="col-th-40pct">Header</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var header in requestHeaders.OrderBy(h => h.Key))
+                                        {
+                                            <tr>
+                                                <td class="text-truncate td-clamp"><strong>@header.Key</strong></td>
+                                                <td class="text-break td-break-all"><code class="small">@header.Value</code></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                                </div>
                             }
-                            @if (history.ResponseBinaryBlobId.HasValue)
+                            else
                             {
-                                <button class="btn btn-sm btn-outline-success" @onclick="DownloadResponseBlob">
-                                    <i class="bi bi-download"></i> Baixar Response Grande
-                                </button>
-                            }
-                            @if (!string.IsNullOrEmpty(history.ResponseBodyBase64))
-                            {
-                                <a class="btn btn-sm btn-outline-success" href="@GetResponseDownloadUrl()" download="@GetResponseFileName()">
-                                    <i class="bi bi-download"></i> Baixar
-                                </a>
+                                <p class="text-muted">Nenhum header</p>
                             }
                         </div>
                     </div>
-                    <div class="card-body">
-                        @if (history.ResponseBinaryBlobId.HasValue)
-                        {
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle"></i> Response body muito grande (armazenado como blob #@history.ResponseBinaryBlobId).
-                                <br />
-                                <strong>ContentType:</strong> <code>@(history.ResponseBodyContentType ?? "application/octet-stream")</code>
-                                @if (responseBlobContent != null)
-                                {
-                                    <hr />
-                                    <div>
-                                        <strong>Tamanho:</strong> @FormatFileSize(responseBlobContent.Length)
-                                    </div>
-                                    @if (IsTextContent(history.ResponseBodyContentType))
-                                    {
-                                        <h6 class="mt-3">Preview (primeiros 10.000 caracteres):</h6>
-                                        <pre class="bg-light p-3 rounded pre-scroll-500"><code>@GetTextPreview(responseBlobContent)</code></pre>
-                                    }
-                                }
-                                else if (loadingBlobContent)
-                                {
-                                    <div class="spinner-border spinner-border-sm mt-2" role="status">
-                                        <span class="visually-hidden">Carregando...</span>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <button class="btn btn-sm btn-outline-primary mt-2" @onclick="LoadResponseBlobContent">
-                                        <i class="bi bi-eye"></i> Carregar Preview
-                                    </button>
-                                }
+                </div>
+
+                <!-- Query Params -->
+                @if (queryParams != null && queryParams.Any())
+                {
+                    <div class="mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">🔎 Query Params</h5>
                             </div>
-                        }
-                        else if (!string.IsNullOrEmpty(history.ResponseBodyBase64))
-                        {
-                            <p class="text-muted">Response binário - ContentType: <code>@history.ResponseBodyContentType</code></p>
-                            <pre class="bg-light p-3 rounded pre-scroll-200"><code>@history.ResponseBodyBase64</code></pre>
-                        }
-                        else if (!string.IsNullOrEmpty(history.ResponseBody))
-                        {
-                            <pre class="bg-light p-3 rounded pre-scroll-500"><code>@UiHelpers.FormatJson(history.ResponseBody)</code></pre>
-                        }
-                        else
-                        {
-                            <p class="text-muted">Vazio</p>
-                        }
+                            <div class="card-body">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th class="col-th-220">Parâmetro</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var param in queryParams)
+                                        {
+                                            <tr>
+                                                <td><strong>@param.Key</strong></td>
+                                                <td><code class="small">@param.Value</code></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- Request Body -->
+                <div class="mb-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">📥 Request Body</h5>
+                            @if (!string.IsNullOrEmpty(history.RequestBody))
+                            {
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => CopyToClipboard(history.RequestBody)">
+                                    <i class="bi bi-clipboard"></i> Copiar
+                                </button>
+                            }
+                        </div>
+                        <div class="card-body">
+                            @if (!string.IsNullOrEmpty(history.RequestFormJson))
+                            {
+                                <h6 class="text-muted">Form/MultiPart (normalizado)</h6>
+                                <pre class="bg-light p-3 rounded pre-scroll-400"><code>@UiHelpers.FormatJson(history.RequestFormJson)</code></pre>
+                            }
+                            else if (!string.IsNullOrEmpty(history.RequestBody))
+                            {
+                                <pre class="bg-light p-3 rounded pre-scroll-400"><code>@UiHelpers.FormatJson(history.RequestBody)</code></pre>
+                            }
+                            else if (!string.IsNullOrEmpty(history.RequestBodyBase64))
+                            {
+                                <p class="text-muted">Request binário capturado (Base64) - ContentType: <code>@history.RequestBodyContentType</code></p>
+                                <pre class="bg-light p-3 rounded pre-scroll-200"><code>@history.RequestBodyBase64</code></pre>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Vazio</p>
+                            }
+                        </div>
                     </div>
                 </div>
+
+            </div>
+
+            <!-- Coluna Direita: Response -->
+            <div class="col-lg-6">
+
+                <!-- Response Headers -->
+                <div class="mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">📥 Response Headers</h5>
+                        </div>
+                        <div class="card-body">
+                            @if (responseHeaders != null && responseHeaders.Any())
+                            {
+                                <div class="table-responsive">
+                                <table class="table table-sm table-hover table-fixed">
+                                    <thead>
+                                        <tr>
+                                            <th class="col-th-40pct">Header</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var header in responseHeaders.OrderBy(h => h.Key))
+                                        {
+                                            <tr>
+                                                <td class="text-truncate td-clamp"><strong>@header.Key</strong></td>
+                                                <td class="text-break td-break-all"><code class="small">@header.Value</code></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Nenhum header</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Response Body -->
+                <div class="mb-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">📤 Response Body</h5>
+                            <div class="d-flex gap-2">
+                                @if (!string.IsNullOrEmpty(history.ResponseBody) && !history.ResponseBody.StartsWith("[Response"))
+                                {
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => CopyToClipboard(history.ResponseBody)">
+                                        <i class="bi bi-clipboard"></i> Copiar
+                                    </button>
+                                }
+                                @if (history.ResponseBinaryBlobId.HasValue)
+                                {
+                                    <button class="btn btn-sm btn-outline-success" @onclick="DownloadResponseBlob">
+                                        <i class="bi bi-download"></i> Baixar Response Grande
+                                    </button>
+                                }
+                                @if (!string.IsNullOrEmpty(history.ResponseBodyBase64))
+                                {
+                                    <a class="btn btn-sm btn-outline-success" href="@GetResponseDownloadUrl()" download="@GetResponseFileName()">
+                                        <i class="bi bi-download"></i> Baixar
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            @if (history.ResponseBinaryBlobId.HasValue)
+                            {
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i> Response body muito grande (armazenado como blob #@history.ResponseBinaryBlobId).
+                                    <br />
+                                    <strong>ContentType:</strong> <code>@(history.ResponseBodyContentType ?? "application/octet-stream")</code>
+                                    @if (responseBlobContent != null)
+                                    {
+                                        <hr />
+                                        <div>
+                                            <strong>Tamanho:</strong> @FormatFileSize(responseBlobContent.Length)
+                                        </div>
+                                        @if (IsTextContent(history.ResponseBodyContentType))
+                                        {
+                                            <h6 class="mt-3">Preview (primeiros 10.000 caracteres):</h6>
+                                            <pre class="bg-light p-3 rounded pre-scroll-500"><code>@GetTextPreview(responseBlobContent)</code></pre>
+                                        }
+                                    }
+                                    else if (loadingBlobContent)
+                                    {
+                                        <div class="spinner-border spinner-border-sm mt-2" role="status">
+                                            <span class="visually-hidden">Carregando...</span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary mt-2" @onclick="LoadResponseBlobContent">
+                                            <i class="bi bi-eye"></i> Carregar Preview
+                                        </button>
+                                    }
+                                </div>
+                            }
+                            else if (!string.IsNullOrEmpty(history.ResponseBodyBase64))
+                            {
+                                <p class="text-muted">Response binário - ContentType: <code>@history.ResponseBodyContentType</code></p>
+                                <pre class="bg-light p-3 rounded pre-scroll-200"><code>@history.ResponseBodyBase64</code></pre>
+                            }
+                            else if (!string.IsNullOrEmpty(history.ResponseBody))
+                            {
+                                <pre class="bg-light p-3 rounded pre-scroll-500"><code>@UiHelpers.FormatJson(history.ResponseBody)</code></pre>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Vazio</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     }
