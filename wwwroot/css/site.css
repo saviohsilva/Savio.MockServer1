@@ -43,3 +43,7 @@ a,
     transition-property: all;
 }
 
+.col-half {
+    max-width: 50%;
+}
+
