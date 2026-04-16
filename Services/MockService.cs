@@ -4,41 +4,35 @@ using Savio.MockServer.Models;
 
 namespace Savio.MockServer.Services;
 
-public class MockService
+public class MockService(IMockRepository repository, IMockGroupRepository groupRepository)
 {
-    private readonly IMockRepository _repository;
-    private readonly IMockGroupRepository _groupRepository;
-
-    public MockService(IMockRepository repository, IMockGroupRepository groupRepository)
-    {
-        _repository = repository;
-        _groupRepository = groupRepository;
-    }
+    private readonly IMockRepository _repository = repository;
+    private readonly IMockGroupRepository _groupRepository = groupRepository;
 
     // ── Mocks ──────────────────────────────────────────────
 
     public async Task<List<MockEndpoint>> GetAllMocksAsync(string? userId = null)
     {
         var entities = await _repository.GetAllAsync(userId);
-        return entities.Select(EntityToModel).ToList();
+        return [.. entities.Select(EntityToModel)];
     }
 
     public async Task<List<MockEndpoint>> GetFilteredMocksAsync(MockFilter filter)
     {
         var entities = await _repository.GetFilteredAsync(filter);
-        return entities.Select(EntityToModel).ToList();
+        return [.. entities.Select(EntityToModel)];
     }
 
     public async Task<List<MockEndpoint>> GetStandaloneMocksAsync(MockFilter? filter = null)
     {
         var entities = await _repository.GetStandaloneMocksAsync(filter);
-        return entities.Select(EntityToModel).ToList();
+        return [.. entities.Select(EntityToModel)];
     }
 
     public async Task<List<MockEndpoint>> GetMocksByGroupIdAsync(int groupId)
     {
         var entities = await _repository.GetByGroupIdAsync(groupId);
-        return entities.Select(EntityToModel).ToList();
+        return [.. entities.Select(EntityToModel)];
     }
 
     public async Task<MockEndpoint?> GetMockByIdAsync(string id)
@@ -120,7 +114,7 @@ public class MockService
             IsActive = false,
             CallCount = 0,
             LastCalledAt = null,
-            CreatedAt = DateTime.Now,
+            CreatedAt = DateTime.UtcNow,
             MockGroupId = original.MockGroupId,
             UserId = original.UserId
         };
@@ -174,7 +168,7 @@ public class MockService
                 IsActive = false,
                 CallCount = 0,
                 LastCalledAt = null,
-                CreatedAt = DateTime.Now,
+                CreatedAt = DateTime.UtcNow,
                 MockGroupId = newGroup.Id,
                 UserId = mock.UserId
             };
@@ -217,7 +211,7 @@ public class MockService
             }
         }
 
-        await _repository.SetActiveBulkAsync(new[] { numericId }, isActive);
+        await _repository.SetActiveBulkAsync([numericId], isActive);
         return (true, null);
     }
 
@@ -244,7 +238,7 @@ public class MockService
     public async Task<List<MockGroup>> GetAllGroupsAsync(string? userId = null)
     {
         var entities = await _groupRepository.GetAllWithMocksAsync(userId);
-        return entities.Select(GroupEntityToModel).ToList();
+        return [.. entities.Select(GroupEntityToModel)];
     }
 
     public async Task<MockGroup?> GetGroupByIdAsync(int id)
@@ -253,7 +247,7 @@ public class MockService
         return entity != null ? GroupEntityToModel(entity) : null;
     }
 
-    public async Task<(bool success, string? error)> AddGroupAsync(string name, string? description, string? userId = null)
+    public async Task<(bool success, string? error)> AddGroupAsync(string name, string? description, string? color = null, string? userId = null)
     {
         if (await _groupRepository.ExistsByNameAsync(name, null, userId))
         {
@@ -264,6 +258,7 @@ public class MockService
         {
             Name = name.Trim(),
             Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
+            Color = string.IsNullOrWhiteSpace(color) ? null : color.Trim(),
             UserId = userId
         };
 
@@ -271,7 +266,7 @@ public class MockService
         return (true, null);
     }
 
-    public async Task<(bool success, string? error)> UpdateGroupAsync(int id, string name, string? description, string? userId = null)
+    public async Task<(bool success, string? error)> UpdateGroupAsync(int id, string name, string? description, string? color = null, string? userId = null)
     {
         if (await _groupRepository.ExistsByNameAsync(name, id, userId))
         {
@@ -286,6 +281,7 @@ public class MockService
 
         entity.Name = name.Trim();
         entity.Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+        entity.Color = string.IsNullOrWhiteSpace(color) ? null : color.Trim();
         await _groupRepository.UpdateAsync(entity);
         return (true, null);
     }
@@ -360,7 +356,7 @@ public class MockService
 
     // ── Mapeamentos ──────────────────────────────────────────
 
-    private MockEndpoint EntityToModel(MockEndpointEntity entity)
+    private static MockEndpoint EntityToModel(MockEndpointEntity entity)
     {
         return new MockEndpoint
         {
@@ -383,11 +379,12 @@ public class MockService
             LastCalledAt = entity.LastCalledAt,
             CreatedAt = entity.CreatedAt,
             MockGroupId = entity.MockGroupId,
-            MockGroupName = entity.MockGroup?.Name
+            MockGroupName = entity.MockGroup?.Name,
+            MockGroupColor = entity.MockGroup?.Color
         };
     }
 
-    private MockEndpointEntity ModelToEntity(MockEndpoint model)
+    private static MockEndpointEntity ModelToEntity(MockEndpoint model)
     {
         var entity = new MockEndpointEntity
         {
@@ -414,16 +411,17 @@ public class MockService
         return entity;
     }
 
-    private MockGroup GroupEntityToModel(MockGroupEntity entity)
+    private static MockGroup GroupEntityToModel(MockGroupEntity entity)
     {
         return new MockGroup
         {
             Id = entity.Id,
             Name = entity.Name,
             Description = entity.Description ?? string.Empty,
+            Color = entity.Color,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
-            MockEndpoints = entity.MockEndpoints.Select(EntityToModel).ToList()
+            MockEndpoints = [.. entity.MockEndpoints.Select(EntityToModel)]
         };
     }
 }

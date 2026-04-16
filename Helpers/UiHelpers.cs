@@ -1,3 +1,5 @@
+using System.Text.Encodings.Web;
+
 namespace Savio.MockServer.Helpers;
 
 public static class UiHelpers
@@ -27,7 +29,11 @@ public static class UiHelpers
         {
             var jsonDoc = System.Text.Json.JsonDocument.Parse(json);
             return System.Text.Json.JsonSerializer.Serialize(jsonDoc,
-                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                });
         }
         catch
         {

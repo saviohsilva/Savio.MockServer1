@@ -4,6 +4,7 @@ public sealed class HistoryFilterState
 {
     public string? UserId { get; set; }
     public int? MockEndpointId { get; set; }
+    public int? MockGroupId { get; set; }
     public string? Method { get; set; }
     public string? RouteContains { get; set; }
     public int? StatusCode { get; set; }
@@ -25,6 +26,7 @@ public sealed class HistoryFilterState
     {
         UserId = null;
         MockEndpointId = null;
+        MockGroupId = null;
         Method = null;
         RouteContains = null;
         StatusCode = null;
@@ -40,6 +42,7 @@ public sealed class HistoryFilterState
         {
             UserId = UserId,
             MockEndpointId = MockEndpointId,
+            MockGroupId = MockGroupId,
             Method = string.IsNullOrWhiteSpace(Method) ? null : Method,
             RouteContains = string.IsNullOrWhiteSpace(RouteContains) ? null : RouteContains,
             ResponseStatusCode = StatusCode,

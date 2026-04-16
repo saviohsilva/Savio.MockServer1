@@ -3,18 +3,13 @@ using Savio.MockServer.Data.Entities;
 
 namespace Savio.MockServer.Data.Repositories;
 
-public class MockGroupRepository : IMockGroupRepository
+public class MockGroupRepository(MockDbContext context) : IMockGroupRepository
 {
-    private readonly MockDbContext _context;
-
-    public MockGroupRepository(MockDbContext context)
-    {
-        _context = context;
-    }
+    private readonly MockDbContext _context = context;
 
     public async Task<List<MockGroupEntity>> GetAllAsync(string? userId = null)
     {
-        var query = _context.MockGroups.AsQueryable();
+        var query = _context.MockGroups.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrEmpty(userId))
             query = query.Where(g => g.UserId == userId);
@@ -25,6 +20,7 @@ public class MockGroupRepository : IMockGroupRepository
     public async Task<List<MockGroupEntity>> GetAllWithMocksAsync(string? userId = null)
     {
         var query = _context.MockGroups
+            .AsNoTracking()
             .Include(g => g.MockEndpoints)
             .AsQueryable();
 
@@ -42,6 +38,7 @@ public class MockGroupRepository : IMockGroupRepository
     public async Task<MockGroupEntity?> GetByIdWithMocksAsync(int id)
     {
         return await _context.MockGroups
+            .AsNoTracking()
             .Include(g => g.MockEndpoints)
             .FirstOrDefaultAsync(g => g.Id == id);
     }

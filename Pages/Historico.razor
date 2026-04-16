@@ -12,10 +12,9 @@
 <PageTitle>Histórico de Requisições</PageTitle>
 
 <div class="container-fluid py-4">
-    <div class="row mb-4">
+    <div class="row mb-3">
         <div class="col">
-            <h1 class="display-4"><i class="bi bi-clock-history"></i> Histórico de Requisições</h1>
-            <p class="lead">Total de @totalCount requisições registradas</p>
+            <h2 class="mb-0"><i class="bi bi-clock-history"></i> Histórico de Requisições <small class="text-muted fs-6">@totalCount registros</small></h2>
         </div>
         <div class="col-auto">
             <select class="form-select form-select-sm me-2 w-auto d-inline-block" @bind="pageSize" @bind:after="OnPageSizeChanged">
@@ -70,8 +69,8 @@
 
     <div class="card mb-4">
         <div class="card-body">
-            <div class="row g-2 align-items-end">
-                <div class="col-12 col-md-2">
+            <div class="row g-2 align-items-end flex-nowrap">
+                <div class="col-md-1" style="min-width:110px">
                     <label class="form-label small text-muted">Método</label>
                     <select class="form-select form-select-sm" @bind="filterState.Method" @bind:after="OnFilterChanged">
                         <option value="">Todos</option>
@@ -83,30 +82,41 @@
                     </select>
                 </div>
 
-                <div class="col-12 col-md-3">
+                <div class="col-md-3">
                     <label class="form-label small text-muted">Rota contém</label>
                     <input class="form-control form-control-sm" placeholder="Ex: /api/pedido" @bind="filterState.RouteContains" @bind:after="OnFilterChanged" />
                 </div>
 
-                <div class="col-12 col-md-2">
+                <div class="col-md-1" style="min-width:90px">
                     <label class="form-label small text-muted">Status</label>
                     <input class="form-control form-control-sm" type="number" min="100" max="599" placeholder="Ex: 200" @bind="filterState.StatusCode" @bind:after="OnFilterChanged" />
                 </div>
 
-                <div class="col-12 col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Grupo</label>
+                    <select class="form-select form-select-sm" @bind="filterState.MockGroupId" @bind:after="OnFilterChanged">
+                        <option value="">Todos</option>
+                        @foreach (var group in groups)
+                        {
+                            <option value="@group.Id">@group.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-2">
                     <label class="form-label small text-muted">Texto contém</label>
                     <input class="form-control form-control-sm" placeholder="Request/Response/IP" @bind="filterState.TextContains" @bind:after="OnFilterChanged" />
                 </div>
 
-                <div class="col-12 col-md-2">
+                <div class="col-md-2">
                     <DateTimeLocalFilter FromUtc="@filterState.FromUtc" ToUtc="@filterState.ToUtc" OnRangeChanged="@OnDateRangeChanged" />
                 </div>
-            </div>
 
-            <div class="mt-2 d-flex gap-2">
-                <button class="btn btn-sm btn-outline-secondary" @onclick="ClearFilters">
-                    <i class="bi bi-x-circle"></i> Limpar filtros
-                </button>
+                <div class="col-md-1 align-self-end">
+                    <button class="btn btn-sm btn-outline-secondary w-100" @onclick="ClearFilters">
+                        <i class="bi bi-x-circle"></i> Limpar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -161,6 +171,12 @@
                                 <a href="/historico/@item.Id" class="btn btn-sm btn-outline-primary" title="Ver detalhes">
                                     <i class="bi bi-eye"></i>
                                 </a>
+                                @if (item.MockEndpoint != null)
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary" title="Editar Mock" @onclick="() => EditarMock(item.MockEndpoint.Id)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                }
                                 <button class="btn btn-sm btn-outline-danger" title="Excluir" @onclick="() => DeleteItem(item.Id)">
                                     <i class="bi bi-trash"></i>
                                 </button>
@@ -171,15 +187,19 @@
             </table>
         </div>
 
-        @if (totalPages > 1)
+        <p class="text-center text-muted small mt-2">
+            Página @currentPage de @TotalPages (@totalCount registros no total)
+        </p>
+
+        @if (TotalPages > 1)
         {
             <nav aria-label="Paginação">
-                <ul class="pagination justify-content-center">
+                <ul class="pagination justify-content-center mb-1">
                     <li class="page-item @(currentPage == 1 ? "disabled" : "")">
                         <button class="page-link" @onclick="() => ChangePage(currentPage - 1)">Anterior</button>
                     </li>
 
-                    @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+                    @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(TotalPages, currentPage + 2); i++)
                     {
                         var pageNumber = i;
                         <li class="page-item @(currentPage == pageNumber ? "active" : "")">
@@ -187,13 +207,10 @@
                         </li>
                     }
 
-                    <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                    <li class="page-item @(currentPage == TotalPages ? "disabled" : "")">
                         <button class="page-link" @onclick="() => ChangePage(currentPage + 1)">Próxima</button>
                     </li>
                 </ul>
-                <p class="text-center text-muted small">
-                    Página @currentPage de @totalPages (exibindo @history.Count de @totalCount registros)
-                </p>
             </nav>
         }
     }

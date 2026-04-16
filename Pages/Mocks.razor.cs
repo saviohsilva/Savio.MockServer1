@@ -24,9 +24,9 @@ public partial class Mocks
     private string filterGroupString = string.Empty;
     private string activeTab = "mocks";
 
-    private List<MockEndpoint> allFilteredMocks = new();
-    private List<MockGroup> groups = new();
-    private HashSet<string> selectedMocks = new();
+    private List<MockEndpoint> allFilteredMocks = [];
+    private List<MockGroup> groups = [];
+    private HashSet<string> selectedMocks = [];
     private int? expandedGroupId;
 
     private string sortColumn = "route";
@@ -35,10 +35,10 @@ public partial class Mocks
     private string? alertMessage;
     private string alertClass = "alert-info";
     private string alertIcon = "bi-info-circle";
-    private List<string> alertDetails = new();
+    private List<string> alertDetails = [];
     private string? currentUserId;
 
-    private List<MockEndpoint> sortedMocks => ApplySorting(allFilteredMocks);
+    private List<MockEndpoint> SortedMocks => ApplySorting(allFilteredMocks);
 
     protected override async Task OnInitializedAsync()
     {
@@ -134,7 +134,7 @@ public partial class Mocks
             _ => mocks.OrderBy(m => m.Route)
         };
 
-        return ordered.ToList();
+        return [.. ordered];
     }
 
     // ── Navegação ──
@@ -145,8 +145,8 @@ public partial class Mocks
     }
 
     private void NavigateToCreateMock() => Navigation.NavigateTo("/mock/create");
-    private void NavigateToCreateMockInGroup(int groupId) => Navigation.NavigateTo($"/mock/create?groupId={groupId}");
-    private void NavigateToEdit(string id) => Navigation.NavigateTo($"/mock/edit/{id}");
+    private void NavigateToCreateMockInGroup(int groupId) => Navigation.NavigateTo($"/mock/create?groupId={groupId}&returnUrl=/mocks?tab=groups");
+    private void NavigateToEdit(string id) => Navigation.NavigateTo($"/mock/edit/{id}?returnUrl={Uri.EscapeDataString("/mocks?tab=" + activeTab)}");
     private void NavigateToCreateGroup() => Navigation.NavigateTo("/group/create");
     private void NavigateToEditGroup(int id) => Navigation.NavigateTo($"/group/edit/{id}");
 
@@ -164,7 +164,7 @@ public partial class Mocks
     {
         if ((bool)(e.Value ?? false))
         {
-            selectedMocks = sortedMocks.Select(m => m.Id).ToHashSet();
+            selectedMocks = [.. SortedMocks.Select(m => m.Id)];
         }
         else
         {
@@ -397,7 +397,7 @@ public partial class Mocks
             }
         }
 
-        return result.ToList();
+        return [.. result];
     }
 
     // ── Alertas ──
@@ -407,7 +407,7 @@ public partial class Mocks
         alertClass = cssClass;
         alertIcon = icon;
         alertMessage = message;
-        alertDetails = details ?? new List<string>();
+        alertDetails = details ?? [];
     }
 
     private void ClearAlert()

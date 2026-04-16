@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using System.Globalization;
+using Savio.MockServer.Services;
 
 namespace Savio.MockServer.Components;
 
@@ -16,10 +17,12 @@ public partial class DateTimeLocalFilter
 
     [Parameter] public EventCallback<(DateTime? fromUtc, DateTime? toUtc, bool isValid)> OnRangeChanged { get; set; }
 
+    [Inject] private BrowserTimezoneService TimezoneService { get; set; } = default!;
+
     protected override void OnParametersSet()
     {
-        fromText = FromUtc.HasValue ? FromUtc.Value.ToLocalTime().ToString(DateTimeLocalFormat, CultureInfo.InvariantCulture) : null;
-        toText = ToUtc.HasValue ? ToUtc.Value.ToLocalTime().ToString(DateTimeLocalFormat, CultureInfo.InvariantCulture) : null;
+        fromText = FromUtc.HasValue ? ToLocalDisplay(FromUtc.Value) : null;
+        toText = ToUtc.HasValue ? ToLocalDisplay(ToUtc.Value) : null;
         validationMessage = null;
     }
 
@@ -49,10 +52,22 @@ public partial class DateTimeLocalFilter
             isValid = false;
         }
 
-        var fromUtc = isValid ? fromLocal?.ToUniversalTime() : null;
-        var toUtc = isValid ? toLocal?.ToUniversalTime() : null;
+        var fromUtc = isValid ? ToUtcFromLocal(fromLocal) : null;
+        var toUtc = isValid ? ToUtcFromLocal(toLocal) : null;
 
         await OnRangeChanged.InvokeAsync((fromUtc, toUtc, isValid));
+    }
+
+    private string ToLocalDisplay(DateTime utc)
+    {
+        var local = TimezoneService.ToLocalTime(utc);
+        return local.ToString(DateTimeLocalFormat, CultureInfo.InvariantCulture);
+    }
+
+    private DateTime? ToUtcFromLocal(DateTime? local)
+    {
+        if (local == null) return null;
+        return TimezoneService.ToLocalTimeReverse(local.Value);
     }
 
     private static DateTime? ParseDateTimeLocal(string? value)

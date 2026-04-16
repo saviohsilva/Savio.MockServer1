@@ -6,7 +6,7 @@ public class MockEndpoint
     public string Route { get; set; } = string.Empty;
     public string Method { get; set; } = "GET";
     public int StatusCode { get; set; } = 200;
-    public Dictionary<string, string> Headers { get; set; } = new();
+    public Dictionary<string, string> Headers { get; set; } = [];
     public string ResponseBodyJson { get; set; } = string.Empty;
     public string ResponseBodyRaw { get; set; } = string.Empty;
 
@@ -24,12 +24,13 @@ public class MockEndpoint
     public int DelayMs { get; set; } = 0;
     public string Description { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastCalledAt { get; set; }
     public int CallCount { get; set; } = 0;
 
     public int? MockGroupId { get; set; }
     public string? MockGroupName { get; set; }
+    public string? MockGroupColor { get; set; }
 
     public string FileName { get; set; } = string.Empty;
 }

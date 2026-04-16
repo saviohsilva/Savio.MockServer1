@@ -4,18 +4,14 @@ using Savio.MockServer.Models;
 
 namespace Savio.MockServer.Data.Repositories;
 
-public class MockRepository : IMockRepository
+public class MockRepository(MockDbContext context) : IMockRepository
 {
-    private readonly MockDbContext _context;
-
-    public MockRepository(MockDbContext context)
-    {
-        _context = context;
-    }
+    private readonly MockDbContext _context = context;
 
     public async Task<List<MockEndpointEntity>> GetAllAsync(string? userId = null)
     {
         var query = _context.MockEndpoints
+            .AsNoTracking()
             .Include(m => m.MockGroup)
             .AsQueryable();
 
@@ -27,7 +23,7 @@ public class MockRepository : IMockRepository
 
     public async Task<List<MockEndpointEntity>> GetFilteredAsync(MockFilter filter)
     {
-        var query = ApplyFilter(_context.MockEndpoints.Include(m => m.MockGroup).AsQueryable(), filter);
+        var query = ApplyFilter(_context.MockEndpoints.AsNoTracking().Include(m => m.MockGroup).AsQueryable(), filter);
         return await query.OrderByDescending(m => m.CreatedAt).ToListAsync();
     }
 

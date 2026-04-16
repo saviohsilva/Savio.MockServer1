@@ -14,6 +14,9 @@ public class MockGroupEntity
     [MaxLength(500)]
     public string? Description { get; set; }
 
+    [MaxLength(20)]
+    public string? Color { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAt { get; set; }
@@ -23,5 +26,5 @@ public class MockGroupEntity
     public ApplicationUser? User { get; set; }
 
     // Navegação
-    public ICollection<MockEndpointEntity> MockEndpoints { get; set; } = new List<MockEndpointEntity>();
+    public ICollection<MockEndpointEntity> MockEndpoints { get; set; } = [];
 }

@@ -4,14 +4,9 @@ using Savio.MockServer.Models;
 
 namespace Savio.MockServer.Data.Repositories;
 
-public class RequestHistoryRepository : IRequestHistoryRepository
+public class RequestHistoryRepository(MockDbContext context) : IRequestHistoryRepository
 {
-    private readonly MockDbContext _context;
-
-    public RequestHistoryRepository(MockDbContext context)
-    {
-        _context = context;
-    }
+    private readonly MockDbContext _context = context;
 
     public async Task<List<RequestHistoryEntity>> GetByMockIdAsync(int mockId, int take = 100)
     {
@@ -109,6 +104,11 @@ public class RequestHistoryRepository : IRequestHistoryRepository
         if (filter.MockEndpointId.HasValue)
         {
             query = query.Where(h => h.MockEndpointId == filter.MockEndpointId.Value);
+        }
+
+        if (filter.MockGroupId.HasValue)
+        {
+            query = query.Where(h => h.MockEndpoint.MockGroupId == filter.MockGroupId.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Method))

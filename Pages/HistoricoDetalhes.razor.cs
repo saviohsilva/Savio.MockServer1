@@ -45,6 +45,7 @@ public partial class HistoricoDetalhes
             }
             catch
             {
+                // Headers/querystring deserialization failures are non-critical; ignore
             }
         }
 
@@ -95,12 +96,20 @@ public partial class HistoricoDetalhes
         }
         catch
         {
+            // Clipboard API may be unavailable in non-secure contexts; ignore
         }
     }
 
     private void VoltarParaLista()
     {
         Navigation.NavigateTo("/historico");
+    }
+
+    private void EditarMock()
+    {
+        if (history?.MockEndpoint == null) return;
+        var returnUrl = Uri.EscapeDataString($"/historico/{history.Id}");
+        Navigation.NavigateTo($"/mock/edit/{history.MockEndpoint.Id}?returnUrl={returnUrl}");
     }
 
     private static Dictionary<string, string> ParseQueryString(string qs)
@@ -170,7 +179,7 @@ public partial class HistoricoDetalhes
         }
     }
 
-    private bool IsTextContent(string? contentType)
+    private static bool IsTextContent(string? contentType)
     {
         if (string.IsNullOrEmpty(contentType))
             return false;
@@ -181,12 +190,12 @@ public partial class HistoricoDetalhes
                contentType.Contains("javascript");
     }
 
-    private string GetTextPreview(byte[] bytes)
+    private static string GetTextPreview(byte[] bytes)
     {
         try
         {
             var text = Encoding.UTF8.GetString(bytes);
-            return text.Length > 10000 ? text.Substring(0, 10000) + "\n\n... (truncado)" : text;
+            return text.Length > 10000 ? text[..10000] + "\n\n... (truncado)" : text;
         }
         catch
         {
@@ -194,15 +203,15 @@ public partial class HistoricoDetalhes
         }
     }
 
-    private string FormatFileSize(long bytes)
+    private static string FormatFileSize(long bytes)
     {
-        string[] sizes = { "B", "KB", "MB", "GB" };
+        string[] sizes = ["B", "KB", "MB", "GB"];
         double len = bytes;
         int order = 0;
         while (len >= 1024 && order < sizes.Length - 1)
         {
             order++;
-            len = len / 1024;
+            len /= 1024;
         }
         return $"{len:0.##} {sizes[order]}";
     }

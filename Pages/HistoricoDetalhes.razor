@@ -34,13 +34,19 @@
     {
         <div class="row mb-4">
             <div class="col">
-                <h1 class="display-4">📋 Detalhes da Requisição</h1>
-                <p class="lead">
+                <h2 class="mb-1">📋 Detalhes da Requisição</h2>
+                <p class="mb-0">
                     <span class="badge bg-@UiHelpers.GetMethodColor(history.Method)">@history.Method</span>
                     <code>@history.Route</code>
                 </p>
             </div>
             <div class="col-auto d-flex gap-2 align-items-start">
+                @if (history.MockEndpoint != null)
+                {
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="EditarMock">
+                        <i class="bi bi-pencil"></i> Editar Mock
+                    </button>
+                }
                 <button class="btn btn-sm btn-outline-danger" @onclick="Excluir">
                     <i class="bi bi-trash"></i> Excluir
                 </button>

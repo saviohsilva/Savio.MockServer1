@@ -11,7 +11,7 @@ using Savio.MockServer.Services;
 
 namespace Savio.MockServer.Pages;
 
-public partial class Index
+public partial class Index : IDisposable
 {
     [CascadingParameter]
     public IModalService Modal { get; set; } = default!;
@@ -21,9 +21,20 @@ public partial class Index
 
     [Inject] private BrowserTimezoneService TimezoneService { get; set; } = default!;
 
-    private List<MockEndpoint> mocks = new();
+    private List<MockEndpoint> mocks = [];
     private string? currentUserId;
     private string? currentAlias;
+
+    private DateTime? LastAccessUtc =>
+        mocks.Any(m => m.LastCalledAt.HasValue)
+            ? mocks.Where(m => m.LastCalledAt.HasValue)
+                   .Max(m => m.LastCalledAt!.Value)
+            : null;
+
+    protected override void OnInitialized()
+    {
+        TimezoneService.OnOffsetSet += OnTimezoneReady;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -35,6 +46,14 @@ public partial class Index
             currentAlias = user?.Alias;
         }
         await LoadMocksAsync();
+    }
+
+    private void OnTimezoneReady() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        TimezoneService.OnOffsetSet -= OnTimezoneReady;
+        GC.SuppressFinalize(this);
     }
 
     private async Task LoadMocksAsync()

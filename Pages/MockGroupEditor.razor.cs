@@ -17,10 +17,11 @@ public partial class MockGroupEditor
 
     private string groupName = string.Empty;
     private string groupDescription = string.Empty;
+    private string groupColor = "#FF6A00";  // Cor padrão do tema
     private string? saveError;
 
-    private List<MockEndpoint> groupMocks = new();
-    private List<MockEndpoint> availableMocks = new();
+    private List<MockEndpoint> groupMocks = [];
+    private List<MockEndpoint> availableMocks = [];
 
     private bool IsEdit => Id > 0;
     private string? currentUserId;
@@ -41,6 +42,7 @@ public partial class MockGroupEditor
             {
                 groupName = group.Name;
                 groupDescription = group.Description;
+                groupColor = string.IsNullOrWhiteSpace(group.Color) ? "#0d6efd" : group.Color;
                 groupMocks = group.MockEndpoints;
             }
 
@@ -60,7 +62,7 @@ public partial class MockGroupEditor
 
         if (IsEdit)
         {
-            var (success, error) = await MockService.UpdateGroupAsync(Id, groupName, groupDescription, currentUserId);
+            var (success, error) = await MockService.UpdateGroupAsync(Id, groupName, groupDescription, groupColor, currentUserId);
             if (!success)
             {
                 saveError = error;
@@ -69,7 +71,7 @@ public partial class MockGroupEditor
         }
         else
         {
-            var (success, error) = await MockService.AddGroupAsync(groupName, groupDescription, currentUserId);
+            var (success, error) = await MockService.AddGroupAsync(groupName, groupDescription, groupColor, currentUserId);
             if (!success)
             {
                 saveError = error;

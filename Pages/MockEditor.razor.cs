@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Savio.MockServer.Data.Entities;
 using Savio.MockServer.Models;
+using Savio.MockServer.Services;
 using System.Text.Json;
 
 namespace Savio.MockServer.Pages;
@@ -17,6 +18,8 @@ public partial class MockEditor
     [CascadingParameter]
     private Task<AuthenticationState>? AuthState { get; set; }
 
+    [Inject] private BrowserTimezoneService TimezoneService { get; set; } = default!;
+
     private MockEndpoint mock = new()
     {
         Method = "GET",
@@ -24,14 +27,15 @@ public partial class MockEditor
         IsActive = true
     };
 
-    private List<HeaderInput> headersInput = new();
-    private List<MockGroup> groups = new();
+    private List<HeaderInput> headersInput = [];
+    private List<MockGroup> groups = [];
     private bool useJson = true;
     private bool useBinary = false;
     private bool useMultipart = false;
     private bool IsEdit => !string.IsNullOrEmpty(Id);
     private string? saveError;
     private string? currentUserId;
+    private string returnUrl = "/mocks";
 
     private IBrowserFile? uploadedBinaryFile;
     private string? uploadedBinaryError;
@@ -51,13 +55,16 @@ public partial class MockEditor
         var uri = new Uri(Navigation.Uri);
         var queryParams = QueryHelpers.ParseQuery(uri.Query);
 
-        if (queryParams.TryGetValue("from", out var from) && from == "unmocked")
+        if (queryParams.TryGetValue("returnUrl", out var returnUrlParam) && !string.IsNullOrWhiteSpace(returnUrlParam))
         {
-            if (queryParams.TryGetValue("id", out var idParam) && int.TryParse(idParam, out int unmockedId))
-            {
-                await LoadFromUnmockedRequest(unmockedId);
-                return;
-            }
+            returnUrl = returnUrlParam.ToString();
+        }
+
+        if (queryParams.TryGetValue("from", out var from) && from == "unmocked"
+            && queryParams.TryGetValue("id", out var idParam) && int.TryParse(idParam, out int unmockedId))
+        {
+            await LoadFromUnmockedRequest(unmockedId);
+            return;
         }
 
         if (queryParams.TryGetValue("groupId", out var groupIdParam) && int.TryParse(groupIdParam, out int groupId))
@@ -76,7 +83,7 @@ public partial class MockEditor
                 useBinary = !useMultipart && (mock.ResponseBinaryBlobId.HasValue || !string.IsNullOrWhiteSpace(mock.ResponseBodyBase64));
                 useJson = !useMultipart && !useBinary && !string.IsNullOrEmpty(mock.ResponseBodyJson);
 
-                headersInput = mock.Headers.Select(h => new HeaderInput { Key = h.Key, Value = h.Value }).ToList();
+                headersInput = [.. mock.Headers.Select(h => new HeaderInput { Key = h.Key, Value = h.Value })];
             }
         }
         else
@@ -100,7 +107,7 @@ public partial class MockEditor
                     if (route.StartsWith(aliasPrefix, StringComparison.OrdinalIgnoreCase))
                     {
                         route = route[aliasPrefix.Length..];
-                        if (!route.StartsWith("/"))
+                        if (!route.StartsWith('/'))
                             route = "/" + route;
                     }
                 }
@@ -109,7 +116,7 @@ public partial class MockEditor
             mock.Method = unmockedRequest.Method;
             mock.StatusCode = 200;
             mock.IsActive = true;
-            mock.Description = $"Mock criado a partir de requisição capturada em {unmockedRequest.FirstSeenAt.ToLocalTime():dd/MM/yyyy HH:mm:ss}";
+            mock.Description = $"Mock criado a partir de requisição capturada em {TimezoneService.FormatLocalTime(unmockedRequest.FirstSeenAt, "dd/MM/yyyy HH:mm:ss")}";
 
             if (!string.IsNullOrEmpty(unmockedRequest.RequestHeadersJson))
             {
@@ -118,12 +125,11 @@ public partial class MockEditor
                     var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(unmockedRequest.RequestHeadersJson);
                     if (headers != null)
                     {
-                        headersInput = headers
-                            .Where(h => !h.Key.StartsWith(":") &&
+                        headersInput = [.. headers
+                            .Where(h => !h.Key.StartsWith(':') &&
                                        !h.Key.Equals("Host", StringComparison.OrdinalIgnoreCase) &&
                                        !h.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
-                            .Select(h => new HeaderInput { Key = h.Key, Value = h.Value })
-                            .ToList();
+                            .Select(h => new HeaderInput { Key = h.Key, Value = h.Value })];
                     }
                 }
                 catch
@@ -132,7 +138,7 @@ public partial class MockEditor
                 }
             }
 
-            if (!headersInput.Any())
+            if (headersInput.Count == 0)
             {
                 headersInput.Add(new HeaderInput { Key = "Content-Type", Value = "application/json" });
             }
@@ -293,7 +299,7 @@ public partial class MockEditor
             {
                 multipart = string.IsNullOrWhiteSpace(mock.ResponseMultipartJson)
                     ? null
-                    : JsonSerializer.Deserialize<MultipartResponse>(mock.ResponseMultipartJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    : JsonSerializer.Deserialize<MultipartResponse>(mock.ResponseMultipartJson, _caseInsensitiveOptions);
             }
             catch
             {
@@ -309,7 +315,7 @@ public partial class MockEditor
                 BlobId = blobId
             });
 
-            mock.ResponseMultipartJson = JsonSerializer.Serialize(multipart, new JsonSerializerOptions { WriteIndented = true });
+            mock.ResponseMultipartJson = JsonSerializer.Serialize(multipart, _indentedOptions);
         }
         catch (Exception ex)
         {
@@ -344,24 +350,27 @@ public partial class MockEditor
             }
         }
 
-        Navigation.NavigateTo("/mocks");
+        Navigation.NavigateTo(returnUrl);
     }
 
     private void Cancel()
     {
-        Navigation.NavigateTo("/mocks");
+        Navigation.NavigateTo(returnUrl);
     }
 
-    private class HeaderInput
+    private static readonly JsonSerializerOptions _caseInsensitiveOptions = new() { PropertyNameCaseInsensitive = true };
+    private static readonly JsonSerializerOptions _indentedOptions = new() { WriteIndented = true };
+
+    private sealed class HeaderInput
     {
         public string Key { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
     }
 
-    private class MultipartResponse
+    private sealed class MultipartResponse
     {
         public string Subtype { get; set; } = string.Empty;
-        public List<Part> Parts { get; set; } = new List<Part>();
+        public List<Part> Parts { get; set; } = [];
 
         public class Part
         {

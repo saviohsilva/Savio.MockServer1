@@ -9,10 +9,10 @@ using System.Text.Json;
 
 namespace Savio.MockServer.Middleware;
 
-public class MockEndpointMiddleware
+public class MockEndpointMiddleware(RequestDelegate next, ILogger<MockEndpointMiddleware> logger)
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<MockEndpointMiddleware> _logger;
+    private readonly RequestDelegate _next = next;
+    private readonly ILogger<MockEndpointMiddleware> _logger = logger;
     // Limite de 5MB para captura de texto do response body
     private const int MaxResponseBodySizeForCapture = 5 * 1024 * 1024;
 
@@ -23,6 +23,7 @@ public class MockEndpointMiddleware
         "/js",
         "/lib",
         "/img",
+        "/favicon",
         "/_content",
         "/_blazor",
         "/_framework",
@@ -34,12 +35,6 @@ public class MockEndpointMiddleware
         "/about",
         "/account"
     ];
-
-    public MockEndpointMiddleware(RequestDelegate next, ILogger<MockEndpointMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
 
     private static bool IsInternalRoute(string path)
     {
@@ -184,7 +179,7 @@ public class MockEndpointMiddleware
                     context.Response.ContentType = responseBodyContentType;
                     if (!string.IsNullOrWhiteSpace(responseBodyFileName))
                     {
-                        context.Response.Headers["Content-Disposition"] = $"attachment; filename=\"{responseBodyFileName}\"";
+                        context.Response.Headers.ContentDisposition = $"attachment; filename=\"{responseBodyFileName}\"";
                     }
 
                     await context.Response.Body.WriteAsync(blob.Value.bytes, context.RequestAborted);
@@ -199,7 +194,7 @@ public class MockEndpointMiddleware
                 }
                 catch
                 {
-                    bytes = Array.Empty<byte>();
+                    bytes = [];
                 }
 
                 responseBodyBase64 = mock.ResponseBodyBase64;
@@ -211,7 +206,7 @@ public class MockEndpointMiddleware
                 context.Response.ContentType = responseBodyContentType;
                 if (!string.IsNullOrWhiteSpace(responseBodyFileName))
                 {
-                    context.Response.Headers["Content-Disposition"] = $"attachment; filename=\"{responseBodyFileName}\"";
+                    context.Response.Headers.ContentDisposition = $"attachment; filename=\"{responseBodyFileName}\"";
                 }
 
                 await context.Response.Body.WriteAsync(bytes, context.RequestAborted);

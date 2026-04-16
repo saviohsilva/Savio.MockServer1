@@ -55,9 +55,20 @@
             <div class="card bg-warning text-white">
                 <div class="card-body">
                     <h5 class="card-title">Último Acesso</h5>
-                    <h2>@(mocks.Any(m => m.LastCalledAt.HasValue)
-                        ? TimezoneService.FormatLocalTime(mocks.Where(m => m.LastCalledAt.HasValue).Max(m => m.LastCalledAt), "HH:mm:ss")
-                        : "Nunca")</h2>
+                    <h2>
+                        @if (!TimezoneService.IsInitialized)
+                        {
+                            <span>—</span>
+                        }
+                        else if (LastAccessUtc.HasValue)
+                        {
+                            @TimezoneService.FormatLocalTime(LastAccessUtc.Value, "HH:mm:ss")
+                        }
+                        else
+                        {
+                            <span>Nunca</span>
+                        }
+                    </h2>
                 </div>
             </div>
         </div>

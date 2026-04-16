@@ -9,13 +9,12 @@
 <PageTitle>Requisições Não Mockadas</PageTitle>
 
 <div class="container-fluid py-4">
-    <div class="row mb-4">
+    <div class="row mb-3">
         <div class="col">
-            <h1 class="display-4"><i class="bi bi-exclamation-triangle"></i> Requisições Não Mockadas</h1>
-            <p class="lead">Requisições recebidas sem mock correspondente</p>
+            <h2 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Requisições Não Mockadas</h2>
         </div>
         <div class="col-auto">
-            <button class="btn btn-outline-secondary" @onclick="LoadUnmockedRequests">
+            <button class="btn btn-outline-secondary btn-sm" @onclick="LoadUnmockedRequests">
                 <i class="bi bi-arrow-clockwise"></i> Atualizar
             </button>
         </div>

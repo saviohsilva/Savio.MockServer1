@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.JSInterop;
 using Savio.MockServer.Data.Entities;
+using Savio.MockServer.Data.Repositories;
 using Savio.MockServer.Models;
 using Savio.MockServer.Services;
 
@@ -12,6 +13,7 @@ public partial class Historico
 {
     [Inject] private BrowserTimezoneService TimezoneService { get; set; } = default!;
     [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
+    [Inject] private IMockGroupRepository MockGroupRepo { get; set; } = default!;
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthState { get; set; }
@@ -23,10 +25,11 @@ public partial class Historico
     public int? MockId { get; set; }
 
     private List<RequestHistoryEntity>? history;
+    private List<MockGroupEntity> groups = [];
     private int currentPage = 1;
     private int pageSize = 100;
     private int totalCount = 0;
-    private int totalPages => (int)Math.Ceiling((double)totalCount / pageSize);
+    private int TotalPages => (int)Math.Ceiling((double)totalCount / pageSize);
     private string? mockDescription;
     private string? mockRoute;
     private string? mockMethod;
@@ -41,6 +44,7 @@ public partial class Historico
         }
 
         filterState.UserId = currentUserId;
+        groups = await MockGroupRepo.GetAllAsync(currentUserId);
 
         if (MockId.HasValue)
         {
@@ -63,6 +67,11 @@ public partial class Historico
         await LoadHistory();
     }
 
+    private void EditarMock(int mockId)
+    {
+        Navigation.NavigateTo($"/mock/edit/{mockId}?returnUrl=%2Fhistorico");
+    }
+
     private async Task OnDateRangeChanged((DateTime? fromUtc, DateTime? toUtc, bool isValid) range)
     {
         filterState.SetDateRange(range.fromUtc, range.toUtc, range.isValid);
@@ -78,7 +87,7 @@ public partial class Historico
         var skip = (currentPage - 1) * pageSize;
         history = await HistoryRepo.SearchAsync(filter, skip, pageSize);
 
-        var maxPage = Math.Max(1, totalPages);
+        var maxPage = Math.Max(1, TotalPages);
         if (currentPage > maxPage)
         {
             currentPage = maxPage;
@@ -115,7 +124,7 @@ public partial class Historico
 
     private async Task ChangePage(int page)
     {
-        if (page < 1 || page > totalPages) return;
+        if (page < 1 || page > TotalPages) return;
 
         currentPage = page;
         await LoadHistory();
@@ -129,8 +138,7 @@ public partial class Historico
 
     private async Task OnFilterChanged()
     {
-        currentPage = 1;
-        await LoadHistory();
+        await OnPageSizeChanged();
     }
 
     private async Task ClearFilters()

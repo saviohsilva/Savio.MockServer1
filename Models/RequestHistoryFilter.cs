@@ -3,6 +3,7 @@ namespace Savio.MockServer.Models;
 public sealed class RequestHistoryFilter
 {
     public int? MockEndpointId { get; set; }
+    public int? MockGroupId { get; set; }
     public string? Method { get; set; }
     public string? RouteContains { get; set; }
     public int? ResponseStatusCode { get; set; }

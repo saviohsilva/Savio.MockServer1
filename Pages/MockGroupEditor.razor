@@ -41,6 +41,17 @@
                         <input type="text" class="form-control" @bind="groupDescription" placeholder="Descrição do agrupamento" />
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">Cor do Grupo</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <input type="color" class="form-control form-control-color" style="width:60px;height:38px;" @bind="groupColor" />
+                            <span class="badge badge-wrap fs-6 px-3 py-2" style="background-color:@groupColor">
+                                <i class="bi bi-folder"></i> @(string.IsNullOrWhiteSpace(groupName) ? "Pré-visualização" : groupName)
+                            </span>
+                        </div>
+                        <div class="form-text">Escolha uma cor para identificar visualmente este grupo nas listagens.</div>
+                    </div>
+
                     @if (!string.IsNullOrEmpty(saveError))
                     {
                         <div class="alert alert-danger">

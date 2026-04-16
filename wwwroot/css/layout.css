@@ -259,6 +259,12 @@ main {
 .col-th-220   { width: 220px; }
 .col-th-40pct { width: 40%; }
 
+/* Coluna de rota: sem quebra de linha para ceder espaço ao Grupo primeiro */
+.route-cell { white-space: nowrap; }
+
+/* Badge que permite quebra de texto (ex: nome de grupo longo) */
+.badge-wrap { white-space: normal; word-break: break-word; }
+
 /* Células com overflow controlado */
 .td-clamp     { max-width: 0; }
 .td-break-all { max-width: 0; word-break: break-all; }
