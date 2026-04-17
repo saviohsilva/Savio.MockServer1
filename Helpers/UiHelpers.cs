@@ -27,7 +27,12 @@ public static class UiHelpers
     {
         try
         {
-            var jsonDoc = System.Text.Json.JsonDocument.Parse(json);
+            var jsonDoc = System.Text.Json.JsonDocument.Parse(json,
+                new System.Text.Json.JsonDocumentOptions
+                {
+                    AllowTrailingCommas = true,
+                    CommentHandling = System.Text.Json.JsonCommentHandling.Skip
+                });
             return System.Text.Json.JsonSerializer.Serialize(jsonDoc,
                 new System.Text.Json.JsonSerializerOptions
                 {
