@@ -101,6 +101,43 @@
     background: var(--color-primary);
 }
 
+/* Pre scroll containers */
+.pre-scroll-400 {
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
+.pre-scroll-200 {
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
+.pre-scroll-400-linear {
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: auto;
+    white-space: pre;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+.pre-scroll-200-linear {
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: auto;
+    white-space: pre;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
 /* Print styles */
 @media print {
     .sidebar,

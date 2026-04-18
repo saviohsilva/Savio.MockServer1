@@ -15,6 +15,7 @@ public partial class HistoricoDetalhes
     public int Id { get; set; }
 
     private bool isLoading = true;
+    private bool requestBodyWrap = true;
     private RequestHistoryEntity? history;
     private Dictionary<string, string>? requestHeaders;
     private Dictionary<string, string>? responseHeaders;

@@ -171,27 +171,35 @@
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">📥 Request Body</h5>
-                            @if (!string.IsNullOrEmpty(history.RequestBody))
-                            {
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => CopyToClipboard(history.RequestBody)">
-                                    <i class="bi bi-clipboard"></i> Copiar
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm @(requestBodyWrap ? "btn-outline-secondary" : "btn-secondary")"
+                                        title="@(requestBodyWrap ? "Modo linear (barra horizontal)" : "Modo com quebra de linha")"
+                                        @onclick="() => requestBodyWrap = !requestBodyWrap">
+                                    <i class="bi @(requestBodyWrap ? "bi-text-wrap" : "bi-text-paragraph")"></i>
+                                    @(requestBodyWrap ? "Linear" : "Quebrar")
                                 </button>
-                            }
+                                @if (!string.IsNullOrEmpty(history.RequestBody))
+                                {
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => CopyToClipboard(history.RequestBody)">
+                                        <i class="bi bi-clipboard"></i> Copiar
+                                    </button>
+                                }
+                            </div>
                         </div>
                         <div class="card-body">
                             @if (!string.IsNullOrEmpty(history.RequestFormJson))
                             {
                                 <h6 class="text-muted">Form/MultiPart (normalizado)</h6>
-                                <pre class="bg-light p-3 rounded pre-scroll-400"><code>@UiHelpers.FormatJson(history.RequestFormJson)</code></pre>
+                                <pre class="bg-light p-3 rounded @(requestBodyWrap ? "pre-scroll-400" : "pre-scroll-400-linear")"><code>@UiHelpers.FormatJson(history.RequestFormJson)</code></pre>
                             }
                             else if (!string.IsNullOrEmpty(history.RequestBody))
                             {
-                                <pre class="bg-light p-3 rounded pre-scroll-400"><code>@UiHelpers.FormatJson(history.RequestBody)</code></pre>
+                                <pre class="bg-light p-3 rounded @(requestBodyWrap ? "pre-scroll-400" : "pre-scroll-400-linear")"><code>@UiHelpers.FormatJson(history.RequestBody)</code></pre>
                             }
                             else if (!string.IsNullOrEmpty(history.RequestBodyBase64))
                             {
                                 <p class="text-muted">Request binário capturado (Base64) - ContentType: <code>@history.RequestBodyContentType</code></p>
-                                <pre class="bg-light p-3 rounded pre-scroll-200"><code>@history.RequestBodyBase64</code></pre>
+                                <pre class="bg-light p-3 rounded @(requestBodyWrap ? "pre-scroll-200" : "pre-scroll-200-linear")"><code>@history.RequestBodyBase64</code></pre>
                             }
                             else
                             {
