@@ -38,16 +38,8 @@ public class MockEndpointMiddleware(RequestDelegate next, ILogger<MockEndpointMi
 
     private static bool IsInternalRoute(string path)
     {
-        if (path == "/")
-            return true;
-
-        foreach (var prefix in InternalPrefixes)
-        {
-            if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        return false;
+        return path == "/"
+            || InternalPrefixes.Any(prefix => path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task InvokeAsync(
@@ -70,7 +62,7 @@ public class MockEndpointMiddleware(RequestDelegate next, ILogger<MockEndpointMi
 
         try
         {
-            await HandleMockRequestAsync(context, mockService, historyRepo, mockRepo, binaryStorage, unmockedRepo, dbContext, path, method);
+            await HandleMockRequestAsync(context, mockService, historyRepo, mockRepo, binaryStorage, unmockedRepo, dbContext);
         }
         catch (Exception ex)
         {
@@ -93,10 +85,11 @@ public class MockEndpointMiddleware(RequestDelegate next, ILogger<MockEndpointMi
         IMockRepository mockRepo,
         IMockBinaryStorage binaryStorage,
         IUnmockedRequestRepository unmockedRepo,
-        MockDbContext dbContext,
-        string path,
-        string method)
+        MockDbContext dbContext)
     {
+        var path = context.Request.Path.Value ?? string.Empty;
+        var method = context.Request.Method;
+
         // Tentar resolver rota com alias: /{alias}/{rota}
         string? resolvedAlias = null;
         string? resolvedUserId = null;
@@ -108,16 +101,37 @@ public class MockEndpointMiddleware(RequestDelegate next, ILogger<MockEndpointMi
             var aliasUser = await dbContext.Users
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Alias == potentialAlias);
+
             if (aliasUser != null)
             {
                 resolvedAlias = potentialAlias;
                 resolvedUserId = aliasUser.Id;
                 mockRoute = "/" + string.Join("/", segments.Skip(1));
-                if (string.IsNullOrEmpty(mockRoute) || mockRoute == "/")
+            }
+            else if (potentialAlias.EndsWith("api", StringComparison.OrdinalIgnoreCase) && potentialAlias.Length > 3)
+            {
+                var aliasPrefix = potentialAlias[..^3];
+                aliasUser = await dbContext.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Alias == aliasPrefix);
+
+                if (aliasUser != null)
                 {
-                    await _next(context);
-                    return;
+                    resolvedAlias = aliasPrefix;
+                    resolvedUserId = aliasUser.Id;
+                    mockRoute = "/api";
+
+                    if (segments.Length > 1)
+                    {
+                        mockRoute += "/" + string.Join("/", segments.Skip(1));
+                    }
                 }
+            }
+
+            if (resolvedUserId != null && (string.IsNullOrEmpty(mockRoute) || mockRoute == "/"))
+            {
+                await _next(context);
+                return;
             }
         }
 
