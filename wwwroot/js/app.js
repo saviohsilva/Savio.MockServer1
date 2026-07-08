@@ -123,11 +123,40 @@
     // ── Funcoes expostas para Blazor JS Interop ────────────────────────────
 
     window.copyToClipboard = async function (text) {
-        try {
-            await navigator.clipboard.writeText(text);
+        var copied = false;
+
+        // Tenta a API moderna primeiro (requer HTTPS ou localhost)
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+                await navigator.clipboard.writeText(text);
+                copied = true;
+            } catch (_) {
+                // Contexto nao-seguro (HTTP): cai no fallback abaixo
+            }
+        }
+
+        // Fallback via execCommand para contextos HTTP
+        if (!copied) {
+            try {
+                var textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.top = '-9999px';
+                textArea.style.left = '-9999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                copied = document.execCommand('copy');
+                document.body.removeChild(textArea);
+            } catch (_) {
+                // execCommand tambem falhou
+            }
+        }
+
+        if (copied) {
             showNotification('Copiado!', 'success');
-        } catch (err) {
-            console.error('Erro ao copiar:', err);
+        } else {
+            console.error('Nao foi possivel copiar para a area de transferencia');
             showNotification('Erro ao copiar texto', 'error');
         }
     };

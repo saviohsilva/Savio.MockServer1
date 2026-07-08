@@ -103,14 +103,7 @@ public partial class HistoricoDetalhes
 
     private async Task CopyToClipboard(string text)
     {
-        try
-        {
-            await Js.InvokeVoidAsync("navigator.clipboard.writeText", text);
-        }
-        catch
-        {
-            // Clipboard API may be unavailable in non-secure contexts; ignore
-        }
+        await Js.InvokeVoidAsync("copyToClipboard", text);
     }
 
     private async Task CopyRequestPayload()

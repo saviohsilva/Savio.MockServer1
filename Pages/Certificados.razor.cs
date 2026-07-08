@@ -139,8 +139,7 @@ public partial class Certificados
 
     private async Task CopyThumbprint(string thumbprint)
     {
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", thumbprint);
-        ShowAlert("Thumbprint copiado para a área de transferência.", true);
+        await JS.InvokeVoidAsync("copyToClipboard", thumbprint);
     }
 
     private void ConfirmDelete(MockCertificate cert)
