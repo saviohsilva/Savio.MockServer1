@@ -18,8 +18,9 @@ public partial class MainLayout
     private Task<AuthenticationState>? AuthState { get; set; }
 
     private string currentTheme = string.Empty;
-    protected int CurrentYear => DateTime.Now.Year;
+    protected static int CurrentYear => DateTime.Now.Year;
     private string serverUrl = string.Empty;
+    private bool isSidebarCollapsed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -49,6 +50,15 @@ public partial class MainLayout
 
             try
             {
+                isSidebarCollapsed = await JS.InvokeAsync<bool>("getSidebarCollapsedState");
+            }
+            catch
+            {
+                isSidebarCollapsed = false;
+            }
+
+            try
+            {
                 var offset = await JS.InvokeAsync<int>("getBrowserTimezoneOffsetMinutes");
                 TimezoneService.SetOffset(offset);
             }
@@ -59,6 +69,18 @@ public partial class MainLayout
 
             StateHasChanged();
         }
+
+        // Inicializa handles de redimensionamento em todas as tabelas presentes no DOM.
+        // Executado em cada render (não só firstRender) para cobrir navegações entre páginas.
+        // A função JS tem guarda interna e não re-inicializa tabelas já processadas.
+        try
+        {
+            await JS.InvokeVoidAsync("initializeResizableTables");
+        }
+        catch
+        {
+            // comportamento opcional de UI
+        }
     }
 
     private async Task OnThemeChanged()
@@ -66,8 +88,9 @@ public partial class MainLayout
         await JS.InvokeVoidAsync("setTheme", currentTheme);
     }
 
-    private void ToggleNavMenu()
+    private async Task ToggleNavMenu()
     {
-        // Toggle gerenciado via JavaScript em app.js
+        isSidebarCollapsed = !isSidebarCollapsed;
+        await JS.InvokeVoidAsync("setSidebarCollapsedState", isSidebarCollapsed);
     }
 }

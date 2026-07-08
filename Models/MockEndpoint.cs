@@ -1,3 +1,5 @@
+Ôªøusing Savio.MockServer.Data.Entities;
+
 namespace Savio.MockServer.Models;
 
 public class MockEndpoint
@@ -10,15 +12,15 @@ public class MockEndpoint
     public string ResponseBodyJson { get; set; } = string.Empty;
     public string ResponseBodyRaw { get; set; } = string.Empty;
 
-    // Response bin·rio (novo: referÍncia a blob persistido)
+    // Response bin√°rio (novo: refer√™ncia a blob persistido)
     public int? ResponseBinaryBlobId { get; set; }
 
-    // Response bin·rio (legado: base64)
+    // Response bin√°rio (legado: base64)
     public string ResponseBodyBase64 { get; set; } = string.Empty;
     public string ResponseBodyContentType { get; set; } = string.Empty;
     public string ResponseBodyFileName { get; set; } = string.Empty;
 
-    // Response multipart (JSON de configuraÁ„o)
+    // Response multipart (JSON de configura√ß√£o)
     public string ResponseMultipartJson { get; set; } = string.Empty;
 
     public int DelayMs { get; set; } = 0;
@@ -31,6 +33,16 @@ public class MockEndpoint
     public int? MockGroupId { get; set; }
     public string? MockGroupName { get; set; }
     public string? MockGroupColor { get; set; }
+
+    // Auth Config vinculado
+    public int? AuthConfigId { get; set; }
+    public string? AuthConfigName { get; set; }
+    public MockAuthEndpointRole? AuthEndpointRole { get; set; }
+
+    // Certificado de cliente (n√≠vel do endpoint)
+    public bool RequireClientCertificate { get; set; }
+    public int? RequiredClientCertificateId { get; set; }
+    public string? RequiredClientCertificateThumbprint { get; set; }
 
     public string FileName { get; set; } = string.Empty;
 }

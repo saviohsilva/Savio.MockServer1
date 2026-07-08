@@ -1,8 +1,4 @@
 @page "/account/settings"
-@using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.Authorization
-@using Savio.MockServer.Data.Entities
-@using System.Text.RegularExpressions
 @attribute [Authorize]
 <PageTitle>Configurações da Conta - Savio Mock Server</PageTitle>
 
@@ -15,8 +11,8 @@
 
     @if (user != null)
     {
-        <div class="row">
-            <div class="col-lg-8">
+        <div class="row justify-content-center">
+            <div class="col-xxl-9 col-xl-10 col-lg-11">
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="mb-0"><i class="bi bi-person"></i> Informações</h5>
@@ -122,9 +118,189 @@
                             <a href="/account/mfa-setup" class="btn btn-outline-primary">
                                 <i class="bi bi-shield-lock"></i> @(mfaEnabled ? "Gerenciar MFA" : "Habilitar MFA")
                             </a>
+                            <a href="/account/change-password" class="btn btn-outline-primary">
+                                <i class="bi bi-key"></i> Alterar senha
+                            </a>
                         </div>
                     </div>
                 </div>
+
+                @if (isCurrentUserAdmin)
+                {
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-people"></i> Administração de Usuários</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3">Usuários administradores podem visualizar dados de outros usuários nas telas de dashboard, mocks e histórico.</p>
+
+                            @if (!isEmailConfigured)
+                            {
+                                <div class="alert alert-warning py-2 mb-3">
+                                    <i class="bi bi-exclamation-triangle"></i> SMTP não configurado. O envio de solicitação de redefinição de senha ficará desabilitado.
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(adminManageMessage))
+                            {
+                                <small class="@adminManageMessageClass d-block mb-2">@adminManageMessage</small>
+                            }
+
+                            @if (!string.IsNullOrEmpty(adminResetMessage))
+                            {
+                                <small class="@adminResetMessageClass d-block mb-2">@adminResetMessage</small>
+                            }
+
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0 table-resizable">
+                                    <thead>
+                                        <tr>
+                                            <th>Usuário</th>
+                                            <th>Alias</th>
+                                            <th>E-mail</th>
+                                            <th class="text-center">Administrador</th>
+                                            <th class="text-center">MFA</th>
+                                            <th class="text-end">Redefinição de Senha</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in adminUsers)
+                                        {
+                                            <tr>
+                                                <td>@item.UserName</td>
+                                                <td><code>@item.Alias</code></td>
+                                                <td>@(string.IsNullOrWhiteSpace(item.Email) ? "—" : item.Email)</td>
+                                                <td class="text-center">
+                                                    <input type="checkbox"
+                                                           class="form-check-input"
+                                                           checked="@item.IsAdmin"
+                                                           disabled="@(item.IsCurrentUser || item.IsProtectedAdmin)"
+                                                           title="@(item.IsCurrentUser
+                                                                 ? "Você não pode remover seu próprio perfil de administrador."
+                                                                 : (item.IsProtectedAdmin ? "A permissão de administrador do usuário mockadmin não pode ser removida." : null))"
+                                                           @onchange="async e => await ToggleAdmin(item, e.Value is bool b && b)" />
+                                                </td>
+                                                <td class="text-center">
+                                                    @if (item.MfaEnabled)
+                                                    {
+                                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                                            <span class="badge bg-success"><i class="bi bi-shield-check"></i> Ativo</span>
+                                                            @if (!item.IsCurrentUser)
+                                                            {
+                                                                <button class="btn btn-sm btn-outline-danger"
+                                                                        title="Desabilitar MFA deste usuário"
+                                                                        @onclick="async () => await DisableMfaForUser(item)">
+                                                                    <i class="bi bi-shield-x"></i>
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary"><i class="bi bi-shield-slash"></i> Inativo</span>
+                                                    }
+                                                </td>
+                                                <td class="text-end">
+                                                    @if (string.IsNullOrWhiteSpace(item.Email))
+                                                    {
+                                                        <span class="text-muted small">Sem e-mail</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-primary"
+                                                                disabled="@(!isEmailConfigured || sendingResetUserId == item.Id)"
+                                                                @onclick="async () => await SendPasswordResetToUser(item)">
+                                                            @if (sendingResetUserId == item.Id)
+                                                            {
+                                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                                            }
+                                                            <i class="bi bi-send"></i> Enviar
+                                                        </button>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-envelope-gear"></i> Configurações de E-mail (SMTP)</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3">
+                                Configure o servidor SMTP para envio de e-mails (redefinição de senha, confirmação de conta, etc.).
+                            </p>
+
+                            @if (isAppsettingsActive)
+                            {
+                                <div class="alert alert-info py-2 mb-3">
+                                    <i class="bi bi-info-circle"></i>
+                                    O SMTP está configurado via <code>appsettings</code>, que tem prioridade sobre as configurações do banco de dados.
+                                    As alterações abaixo serão salvas, mas só terão efeito se a chave <code>Email:SmtpHost</code> for removida do <code>appsettings</code>.
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(emailSettingsMessage))
+                            {
+                                <small class="@emailSettingsMessageClass d-block mb-3">@emailSettingsMessage</small>
+                            }
+
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="form-label fw-semibold">Servidor SMTP</label>
+                                    <input type="text" class="form-control" @bind="emailSmtpHost"
+                                           placeholder="smtp.exemplo.com" maxlength="256" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Porta</label>
+                                    <input type="number" class="form-control" @bind="emailSmtpPort"
+                                           min="1" max="65535" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Usuário SMTP</label>
+                                    <input type="text" class="form-control" @bind="emailSmtpUser"
+                                           placeholder="usuario@exemplo.com" maxlength="256" autocomplete="off" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Senha SMTP</label>
+                                    <input type="password" class="form-control" @bind="emailSmtpPass"
+                                           placeholder="@(hasExistingPassword ? "••••••••  (deixe em branco para manter a atual)" : "Senha")"
+                                           maxlength="512" autocomplete="new-password" />
+                                    <div class="form-text">
+                                        <i class="bi bi-shield-lock"></i> Armazenada criptografada no banco de dados.
+                                        @if (hasExistingPassword)
+                                        {
+                                            <span> Deixe em branco para manter a senha atual.</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">E-mail remetente</label>
+                                    <input type="email" class="form-control" @bind="emailFromEmail"
+                                           placeholder="noreply@exemplo.com" maxlength="256" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Nome remetente</label>
+                                    <input type="text" class="form-control" @bind="emailFromName"
+                                           placeholder="Savio Mock Server" maxlength="256" />
+                                </div>
+                                <div class="col-12">
+                                    <button class="btn btn-primary" @onclick="SaveEmailSettings" disabled="@isSavingEmailSettings">
+                                        @if (isSavingEmailSettings)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                        }
+                                        <i class="bi bi-floppy"></i> Salvar configurações de e-mail
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
         </div>
     }

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+Ôªøusing System.ComponentModel.DataAnnotations;
 
 namespace Savio.MockServer.Data.Entities;
 
@@ -22,13 +22,13 @@ public class RequestHistoryEntity
 
     public string? RequestHeadersJson { get; set; }
     
-    // Texto (json/raw) quando aplic·vel
+    // Texto (json/raw) quando aplic√°vel
     public string? RequestBody { get; set; }
     
     // Multipart/form-data ou x-www-form-urlencoded normalizado em JSON
     public string? RequestFormJson { get; set; }
     
-    // Conte˙do bin·rio de request quando aplic·vel (base64)
+    // Conte√∫do bin√°rio de request quando aplic√°vel (base64)
     public string? RequestBodyBase64 { get; set; }
     public string? RequestBodyContentType { get; set; }
     public string? RequestBodyFileName { get; set; }
@@ -37,15 +37,15 @@ public class RequestHistoryEntity
     
     public string? ResponseHeadersJson { get; set; }
     
-    // Texto (json/raw) quando aplic·vel
+    // Texto (json/raw) quando aplic√°vel
     public string? ResponseBody { get; set; }
     
-    // Conte˙do bin·rio de response quando aplic·vel (base64)
+    // Conte√∫do bin√°rio de response quando aplic√°vel (base64)
     public string? ResponseBodyBase64 { get; set; }
     public string? ResponseBodyContentType { get; set; }
     public string? ResponseBodyFileName { get; set; }
     
-    // ReferÍncia a blob para responses muito grandes
+    // Refer√™ncia a blob para responses muito grandes
     public int? ResponseBinaryBlobId { get; set; }
     
     public int DelayMs { get; set; }
@@ -55,6 +55,6 @@ public class RequestHistoryEntity
     [MaxLength(50)]
     public string? ClientIp { get; set; }
     
-    // NavegaÁ„o
+    // Navega√ß√£o
     public MockEndpointEntity MockEndpoint { get; set; } = null!;
 }

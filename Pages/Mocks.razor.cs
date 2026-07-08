@@ -2,11 +2,12 @@ using Blazored.Modal;
 using Blazored.Modal.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.JSInterop;
 using Savio.MockServer.Components;
-using Savio.MockServer.Data.Entities;
 using Savio.MockServer.Models;
+using Savio.MockServer.Security;
 using Savio.MockServer.Services;
 
 namespace Savio.MockServer.Pages;
@@ -18,6 +19,10 @@ public partial class Mocks
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthState { get; set; }
+
+    private const string AlertIconWarning = "bi-exclamation-triangle";
+    private const string AlertClassSuccess = "alert-success";
+    private const string AlertIconSuccess = "bi-check-circle";
 
     private readonly MockFilter filter = new();
     private string filterActiveString = string.Empty;
@@ -37,35 +42,105 @@ public partial class Mocks
     private string alertIcon = "bi-info-circle";
     private List<string> alertDetails = [];
     private string? currentUserId;
+    private bool isCurrentUserAdmin;
+    private string? selectedUserId;
+    private List<UserScopeOption> userOptions = [];
+
+    private bool IsScopedToAnotherUser =>
+        isCurrentUserAdmin
+        && !string.IsNullOrWhiteSpace(selectedUserId)
+        && !string.Equals(selectedUserId, currentUserId, StringComparison.Ordinal);
 
     private List<MockEndpoint> SortedMocks => ApplySorting(allFilteredMocks);
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Garante que tabelas que aparecem condicionalmente (acordeão, abas)
+        // recebam os handles de redimensionamento após cada render do componente.
+        try
+        {
+            await JS.InvokeVoidAsync("initializeResizableTables");
+        }
+        catch
+        {
+            // comportamento opcional de UI
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        if (AuthState != null)
-        {
-            var authState = await AuthState;
-            var user = await UserManager.GetUserAsync(authState.User);
-            currentUserId = user?.Id;
-        }
+        await InitializeUserContextAsync();
+
+        selectedUserId = currentUserId;
 
         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("tab", out var tabValue))
+        var query = QueryHelpers.ParseQuery(uri.Query);
+        if (query.TryGetValue("tab", out var tabValue))
         {
             activeTab = tabValue.ToString();
         }
 
+        if (isCurrentUserAdmin && query.TryGetValue("userId", out var userIdQueryValue))
+        {
+            var scopedUserId = userIdQueryValue.ToString();
+            if (!string.IsNullOrWhiteSpace(scopedUserId) && userOptions.Any(u => u.Id == scopedUserId))
+                selectedUserId = scopedUserId;
+        }
+
         await LoadDataAsync();
+    }
+
+    private async Task InitializeUserContextAsync()
+    {
+        if (AuthState == null)
+            return;
+
+        var authState = await AuthState;
+        var user = await UserManager.GetUserAsync(authState.User);
+        currentUserId = user?.Id;
+
+        if (user == null)
+            return;
+
+        isCurrentUserAdmin = await UserManager.IsInRoleAsync(user, AppRoles.Admin);
+        if (!isCurrentUserAdmin)
+            return;
+
+        userOptions = await UserManager.Users
+            .OrderBy(u => u.UserName)
+            .Select(u => new UserScopeOption
+            {
+                Id = u.Id,
+                Label = string.IsNullOrWhiteSpace(u.Alias)
+                    ? (u.UserName ?? "(sem usuário)")
+                    : $"{u.UserName} (/{u.Alias})"
+            })
+            .ToListAsync();
     }
 
     private async Task LoadDataAsync()
     {
         filter.IsActive = string.IsNullOrEmpty(filterActiveString) ? null : bool.Parse(filterActiveString);
         filter.MockGroupId = string.IsNullOrEmpty(filterGroupString) ? null : int.Parse(filterGroupString);
-        filter.UserId = currentUserId;
+        filter.UserId = isCurrentUserAdmin ? selectedUserId : currentUserId;
         allFilteredMocks = await MockService.GetFilteredMocksAsync(filter);
-        groups = await MockService.GetAllGroupsAsync(currentUserId);
+        groups = await MockService.GetAllGroupsAsync(filter.UserId);
         selectedMocks.Clear();
+    }
+
+    private async Task OnScopeUserChanged()
+    {
+        if (!isCurrentUserAdmin)
+            return;
+
+        if (string.IsNullOrWhiteSpace(selectedUserId) || !userOptions.Any(u => u.Id == selectedUserId))
+            selectedUserId = currentUserId;
+
+        var tab = Uri.EscapeDataString(activeTab);
+        var userId = Uri.EscapeDataString(selectedUserId ?? string.Empty);
+        Navigation.NavigateTo($"/mocks?tab={tab}&userId={userId}", forceLoad: false);
+
+        await LoadDataAsync();
     }
 
     private void OnFilterChanged()
@@ -154,7 +229,10 @@ public partial class Mocks
     {
         if (int.TryParse(mockId, out int numericId))
         {
-            Navigation.NavigateTo($"/historico?mockId={numericId}");
+            var scope = isCurrentUserAdmin && !string.IsNullOrWhiteSpace(selectedUserId)
+                ? $"&userId={Uri.EscapeDataString(selectedUserId)}"
+                : string.Empty;
+            Navigation.NavigateTo($"/historico?mockId={numericId}{scope}");
         }
     }
 
@@ -198,11 +276,11 @@ public partial class Mocks
 
         if (errors.Count > 0)
         {
-            ShowAlert("alert-warning", "bi-exclamation-triangle", "Alguns mocks não puderam ser ativados:", errors);
+            ShowAlert("alert-warning", AlertIconWarning, "Alguns mocks não puderam ser ativados:", errors);
         }
         else
         {
-            ShowAlert("alert-success", "bi-check-circle", "Mocks selecionados ativados com sucesso.");
+            ShowAlert(AlertClassSuccess, AlertIconSuccess, "Mocks selecionados ativados com sucesso.");
         }
 
         await LoadDataAsync();
@@ -215,7 +293,7 @@ public partial class Mocks
             await MockService.SetMockActiveAsync(id, false);
         }
 
-        ShowAlert("alert-success", "bi-check-circle", "Mocks selecionados desativados com sucesso.");
+        ShowAlert(AlertClassSuccess, AlertIconSuccess, "Mocks selecionados desativados com sucesso.");
         await LoadDataAsync();
     }
 
@@ -239,7 +317,7 @@ public partial class Mocks
                 await MockService.DeleteMockAsync(id);
             }
 
-            ShowAlert("alert-success", "bi-check-circle", $"{count} mock(s) excluído(s) com sucesso.");
+            ShowAlert(AlertClassSuccess, AlertIconSuccess, $"{count} mock(s) excluído(s) com sucesso.");
             await LoadDataAsync();
         }
     }
@@ -270,11 +348,11 @@ public partial class Mocks
         var (success, error) = await MockService.DuplicateMockAsync(id);
         if (success)
         {
-            ShowAlert("alert-success", "bi-check-circle", "Mock duplicado com sucesso. A cópia foi criada como inativa.");
+            ShowAlert(AlertClassSuccess, AlertIconSuccess, "Mock duplicado com sucesso. A cópia foi criada como inativa.");
         }
         else
         {
-            ShowAlert("alert-danger", "bi-exclamation-triangle", error ?? "Erro ao duplicar mock.");
+            ShowAlert("alert-danger", AlertIconWarning, error ?? "Erro ao duplicar mock.");
         }
 
         await LoadDataAsync();
@@ -293,11 +371,11 @@ public partial class Mocks
         var (success, error, conflicts) = await MockService.ActivateGroupMocksAsync(groupId);
         if (!success)
         {
-            ShowAlert("alert-warning", "bi-exclamation-triangle", error!, conflicts);
+            ShowAlert("alert-warning", AlertIconWarning, error!, conflicts);
         }
         else
         {
-            ShowAlert("alert-success", "bi-check-circle", "Todos os mocks do grupo foram ativados.");
+            ShowAlert(AlertClassSuccess, AlertIconSuccess, "Todos os mocks do grupo foram ativados.");
         }
 
         await LoadDataAsync();
@@ -318,7 +396,7 @@ public partial class Mocks
         if (!result.Cancelled)
         {
             await MockService.DeactivateGroupMocksAsync(groupId);
-            ShowAlert("alert-success", "bi-check-circle", "Todos os mocks do grupo foram desativados.");
+            ShowAlert(AlertClassSuccess, AlertIconSuccess, "Todos os mocks do grupo foram desativados.");
             await LoadDataAsync();
         }
     }
@@ -328,11 +406,11 @@ public partial class Mocks
         var (success, error) = await MockService.DuplicateGroupAsync(groupId);
         if (success)
         {
-            ShowAlert("alert-success", "bi-check-circle", "Agrupamento duplicado com sucesso. Todos os mocks da cópia foram criados como inativos.");
+            ShowAlert(AlertClassSuccess, AlertIconSuccess, "Agrupamento duplicado com sucesso. Todos os mocks da cópia foram criados como inativos.");
         }
         else
         {
-            ShowAlert("alert-danger", "bi-exclamation-triangle", error ?? "Erro ao duplicar agrupamento.");
+            ShowAlert("alert-danger", AlertIconWarning, error ?? "Erro ao duplicar agrupamento.");
         }
 
         await LoadDataAsync();
@@ -414,5 +492,11 @@ public partial class Mocks
     {
         alertMessage = null;
         alertDetails.Clear();
+    }
+
+    private sealed class UserScopeOption
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
     }
 }

@@ -1,8 +1,6 @@
 @page "/historico"
 @using Savio.MockServer.Data
 @using Savio.MockServer.Data.Repositories
-@using Savio.MockServer.Data.Entities
-@using Savio.MockServer.Models
 @using Savio.MockServer.Components
 @inject IRequestHistoryRepository HistoryRepo
 @inject MockDbContext _context
@@ -30,6 +28,21 @@
             </button>
         </div>
     </div>
+
+    @if (isCurrentUserAdmin)
+    {
+        <div class="row mb-3">
+            <div class="col-lg-5 col-md-7">
+                <label class="form-label small text-muted">Visualizar histórico do usuário</label>
+                <select class="form-select form-select-sm" @bind="selectedUserId" @bind:after="OnScopeUserChanged">
+                    @foreach (var option in userOptions)
+                    {
+                        <option value="@option.Id">@option.Label</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
 
     @if (MockId.HasValue)
     {
@@ -69,8 +82,8 @@
 
     <div class="card mb-4">
         <div class="card-body">
-            <div class="row g-2 align-items-end flex-nowrap">
-                <div class="col-md-1" style="min-width:110px">
+            <div class="row g-2 align-items-end filter-toolbar">
+                <div class="col-12 col-sm-6 col-md-1" style="min-width:110px">
                     <label class="form-label small text-muted">Método</label>
                     <select class="form-select form-select-sm" @bind="filterState.Method" @bind:after="OnFilterChanged">
                         <option value="">Todos</option>
@@ -82,17 +95,17 @@
                     </select>
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-12 col-sm-6 col-md-3">
                     <label class="form-label small text-muted">Rota contém</label>
-                    <input class="form-control form-control-sm" placeholder="Ex: /api/pedido" @bind="filterState.RouteContains" @bind:after="OnFilterChanged" />
+                    <input class="form-control form-control-sm" placeholder="Ex: /api/pedido" @bind="filterState.RouteContains" @bind:after="OnTextFilterChanged" />
                 </div>
 
-                <div class="col-md-1" style="min-width:90px">
+                <div class="col-12 col-sm-6 col-md-1" style="min-width:90px">
                     <label class="form-label small text-muted">Status</label>
                     <input class="form-control form-control-sm" type="number" min="100" max="599" placeholder="Ex: 200" @bind="filterState.StatusCode" @bind:after="OnFilterChanged" />
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-12 col-sm-6 col-md-2">
                     <label class="form-label small text-muted">Grupo</label>
                     <select class="form-select form-select-sm" @bind="filterState.MockGroupId" @bind:after="OnFilterChanged">
                         <option value="">Todos</option>
@@ -103,18 +116,18 @@
                     </select>
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-12 col-sm-6 col-md-2">
                     <label class="form-label small text-muted">Texto contém</label>
-                    <input class="form-control form-control-sm" placeholder="Request/Response/IP" @bind="filterState.TextContains" @bind:after="OnFilterChanged" />
+                    <input class="form-control form-control-sm" placeholder="Request/Response/IP" @bind="filterState.TextContains" @bind:after="OnTextFilterChanged" />
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-12 col-sm-6 col-md-2">
                     <DateTimeLocalFilter FromUtc="@filterState.FromUtc" ToUtc="@filterState.ToUtc" OnRangeChanged="@OnDateRangeChanged" />
                 </div>
 
-                <div class="col-md-1 align-self-end">
-                    <button class="btn btn-sm btn-outline-secondary w-100" @onclick="ClearFilters">
-                        <i class="bi bi-x-circle"></i> Limpar
+                <div class="col-12 col-sm-6 col-md-1 align-self-end filter-clear-col">
+                    <button class="btn btn-sm btn-outline-secondary w-100 filter-clear-btn" @onclick="ClearFilters">
+                        <i class="bi bi-x-circle"></i> <span class="filter-clear-label">Limpar</span>
                     </button>
                 </div>
             </div>
@@ -138,16 +151,30 @@
     else
     {
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover table-resizable">
                 <thead>
                     <tr>
-                        <th>Data/Hora</th>
-                        <th>Método</th>
-                        <th>Rota</th>
-                        <th>Status</th>
-                        <th>Delay</th>
-                        <th>IP</th>
-                        <th>Mock</th>
+                        <th role="button" @onclick='() => ToggleSort("requestedAt")'>
+                            Data/Hora <i class="bi @GetSortIcon("requestedAt")"></i>
+                        </th>
+                        <th role="button" @onclick='() => ToggleSort("method")'>
+                            Método <i class="bi @GetSortIcon("method")"></i>
+                        </th>
+                        <th role="button" @onclick='() => ToggleSort("route")'>
+                            Rota <i class="bi @GetSortIcon("route")"></i>
+                        </th>
+                        <th role="button" @onclick='() => ToggleSort("status")'>
+                            Status <i class="bi @GetSortIcon("status")"></i>
+                        </th>
+                        <th role="button" @onclick='() => ToggleSort("delay")'>
+                            Delay <i class="bi @GetSortIcon("delay")"></i>
+                        </th>
+                        <th role="button" @onclick='() => ToggleSort("ip")'>
+                            IP <i class="bi @GetSortIcon("ip")"></i>
+                        </th>
+                        <th role="button" @onclick='() => ToggleSort("mock")'>
+                            Mock <i class="bi @GetSortIcon("mock")"></i>
+                        </th>
                         <th class="col-th-140">Ações</th>
                     </tr>
                 </thead>
@@ -162,18 +189,18 @@
                             <td>@item.DelayMs ms</td>
                             <td>@item.ClientIp</td>
                             <td>
-                                @if (item.MockEndpoint != null)
+                                @if (item.MockEndpointId.HasValue)
                                 {
-                                    <small class="text-muted">@item.MockEndpoint.Description</small>
+                                    <small class="text-muted">@item.MockEndpointDescription</small>
                                 }
                             </td>
                             <td class="d-flex gap-1">
                                 <a href="/historico/@item.Id" class="btn btn-sm btn-outline-primary" title="Ver detalhes">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                @if (item.MockEndpoint != null)
+                                @if (item.MockEndpointId.HasValue)
                                 {
-                                    <button class="btn btn-sm btn-outline-secondary" title="Editar Mock" @onclick="() => EditarMock(item.MockEndpoint.Id)">
+                                    <button class="btn btn-sm btn-outline-secondary" title="Editar Mock" @onclick="() => EditarMock(item.MockEndpointId!.Value)">
                                         <i class="bi bi-pencil"></i>
                                     </button>
                                 }

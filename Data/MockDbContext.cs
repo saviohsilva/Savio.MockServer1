@@ -4,28 +4,27 @@ using Savio.MockServer.Data.Entities;
 
 namespace Savio.MockServer.Data;
 
-public class MockDbContext : IdentityDbContext<ApplicationUser>
+public class MockDbContext(DbContextOptions<MockDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
-    public MockDbContext(DbContextOptions<MockDbContext> options) : base(options)
-    {
-    }
-
     public DbSet<MockEndpointEntity> MockEndpoints { get; set; }
     public DbSet<RequestHistoryEntity> RequestHistory { get; set; }
     public DbSet<UnmockedRequestEntity> UnmockedRequests { get; set; }
     public DbSet<MockBinaryBlobEntity> MockBinaryBlobs { get; set; }
     public DbSet<MockGroupEntity> MockGroups { get; set; }
+    public DbSet<EmailSettingEntity> EmailSettings { get; set; }
+    public DbSet<MockCertificateEntity> MockCertificates { get; set; }
+    public DbSet<MockAuthConfigEntity> MockAuthConfigs { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder builder)
     {
-        base.OnModelCreating(modelBuilder);
+        base.OnModelCreating(builder);
 
-        modelBuilder.Entity<ApplicationUser>(entity =>
+        builder.Entity<ApplicationUser>(entity =>
         {
             entity.HasIndex(e => e.Alias).IsUnique();
         });
 
-        modelBuilder.Entity<MockGroupEntity>(entity =>
+        builder.Entity<MockGroupEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.UserId, e.Name }).IsUnique();
@@ -38,7 +37,7 @@ public class MockDbContext : IdentityDbContext<ApplicationUser>
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<MockEndpointEntity>(entity =>
+        builder.Entity<MockEndpointEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.Route, e.Method });
@@ -49,7 +48,34 @@ public class MockDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(e => e.MockGroup)
                 .WithMany(g => g.MockEndpoints)
                 .HasForeignKey(e => e.MockGroupId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.AuthConfig)
+                .WithMany(a => a.MockEndpoints)
+                .HasForeignKey(e => e.AuthConfigId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.RequiredClientCertificate)
+                .WithMany()
+                .HasForeignKey(e => e.RequiredClientCertificateId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        builder.Entity<MockAuthConfigEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.CreatedAt);
+
+            entity.HasOne(e => e.RequiredCertificate)
+                .WithMany(c => c.AuthConfigs)
+                .HasForeignKey(e => e.RequiredCertificateId)
+                .OnDelete(DeleteBehavior.NoAction);
 
             entity.HasOne(e => e.User)
                 .WithMany()
@@ -57,11 +83,25 @@ public class MockDbContext : IdentityDbContext<ApplicationUser>
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<RequestHistoryEntity>(entity =>
+        builder.Entity<MockCertificateEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Thumbprint);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.CreatedAt);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<RequestHistoryEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.MockEndpointId);
             entity.HasIndex(e => e.RequestedAt);
+            entity.HasIndex(e => new { e.MockEndpointId, e.RequestedAt });
 
             entity.HasOne(e => e.MockEndpoint)
                 .WithMany(m => m.RequestHistory)
@@ -69,18 +109,25 @@ public class MockDbContext : IdentityDbContext<ApplicationUser>
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<UnmockedRequestEntity>(entity =>
+        builder.Entity<UnmockedRequestEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.Route, e.Method });
             entity.HasIndex(e => e.MockCreated);
             entity.HasIndex(e => e.LastSeenAt);
+            entity.HasIndex(e => e.UserId);
         });
 
-        modelBuilder.Entity<MockBinaryBlobEntity>(entity =>
+        builder.Entity<MockBinaryBlobEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.CreatedAt);
+        });
+
+        builder.Entity<EmailSettingEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
         });
     }
 }

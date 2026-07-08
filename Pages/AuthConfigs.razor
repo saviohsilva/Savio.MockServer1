@@ -1,0 +1,146 @@
+@page "/auth-configs"
+@using Savio.MockServer.Models
+@using Savio.MockServer.Services
+@using Savio.MockServer.Data.Entities
+@using Microsoft.AspNetCore.Identity
+@inject MockAuthConfigService AuthConfigService
+@inject NavigationManager Navigation
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Configurações de Autenticação</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-key me-2"></i>Configurações de Autenticação</h1>
+            <p class="text-muted">
+                Crie configurações de auth que podem ser vinculadas a endpoints mock.
+                Um endpoint pode <em>emitir tokens</em> ou <em>exigir autenticação</em>.
+            </p>
+        </div>
+        <div class="col-auto d-flex align-items-center">
+            <a href="/auth-configs/novo" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Nova Configuração
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(alertMessage))
+    {
+        <div class="alert @alertClass alert-dismissible fade show" role="alert">
+            <i class="bi @alertIcon me-1"></i> @alertMessage
+            <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+        </div>
+    }
+    else if (!configs.Any())
+    {
+        <div class="cert-empty-state">
+            <i class="bi bi-key cert-empty-icon"></i>
+            <h4>Nenhuma configuração de autenticação</h4>
+            <p class="text-muted">Crie uma configuração e vincule-a a um endpoint para ativar autenticação real.</p>
+            <a href="/auth-configs/novo" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Nova Configuração
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Tipo</th>
+                        <th>JWT</th>
+                        <th>Certificado</th>
+                        <th>Criado em</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var cfg in configs)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@cfg.Name</strong>
+                                @if (!string.IsNullOrWhiteSpace(cfg.Description))
+                                {
+                                    <br /><small class="text-muted">@cfg.Description</small>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge @GetTypeBadgeClass(cfg.Type)">
+                                    <i class="bi @GetTypeIcon(cfg.Type) me-1"></i>@cfg.Type
+                                </span>
+                            </td>
+                            <td>
+                                @if (cfg.Type == MockAuthType.Bearer && cfg.GenerateJwtToken)
+                                {
+                                    <span class="badge bg-info text-dark"><i class="bi bi-check-circle me-1"></i>Habilitado</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (cfg.RequireCertificate)
+                                {
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-shield-lock me-1"></i>@(cfg.RequiredCertificateName ?? "Qualquer")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">—</span>
+                                }
+                            </td>
+                            <td class="text-muted small">@cfg.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/auth-configs/editar/@cfg.Id" class="btn btn-outline-secondary" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button class="btn btn-outline-danger" @onclick="() => ConfirmDelete(cfg)" title="Remover">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (configToDelete != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Confirmar remoção</h5>
+                    <button class="btn-close" @onclick="() => configToDelete = null"></button>
+                </div>
+                <div class="modal-body">
+                    Deseja remover a configuração <strong>@configToDelete.Name</strong>?
+                    Os endpoints que usavam esta configuração deixarão de exigir autenticação.
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => configToDelete = null">Cancelar</button>
+                    <button class="btn btn-danger" @onclick="ExecuteDelete"><i class="bi bi-trash me-1"></i>Remover</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

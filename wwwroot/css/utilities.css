@@ -1,5 +1,5 @@
 /* ========================================
-   CLASSES UTILITÁRIAS
+   CLASSES UTILITï¿½RIAS
    ======================================== */
 
 /* Texto */
@@ -13,22 +13,22 @@
     white-space: nowrap;
 }
 
-/* Espaçamento */
+/* Espaï¿½amento */
 .gap-1 { gap: 0.25rem; }
 .gap-2 { gap: 0.5rem; }
 .gap-3 { gap: 1rem; }
 .gap-4 { gap: 1.5rem; }
 
 /* Sombras customizadas */
-.shadow-evertec {
+.shadow-brand {
     box-shadow: 0 0.5rem 1rem rgba(var(--color-primary-rgb, 255, 106, 0), 0.15) !important;
 }
 
-.shadow-evertec-lg {
+.shadow-brand-lg {
     box-shadow: 0 1rem 3rem rgba(var(--color-primary-rgb, 255, 106, 0), 0.175) !important;
 }
 
-/* Animações */
+/* Animaï¿½ï¿½es */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -131,6 +131,24 @@
 
 .pre-scroll-200-linear {
     max-height: 200px;
+    overflow-y: auto;
+    overflow-x: auto;
+    white-space: pre;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+.pre-scroll-500-wrap {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
+.pre-scroll-500-linear {
+    max-height: 500px;
     overflow-y: auto;
     overflow-x: auto;
     white-space: pre;

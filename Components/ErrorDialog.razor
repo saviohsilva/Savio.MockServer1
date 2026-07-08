@@ -1,14 +1,16 @@
-<div class="text-center">
-    <i class="bi bi-exclamation-triangle fs-1 text-danger d-block mb-3"></i>
-    <p>@Message</p>
+<div class="text-center app-dialog-content">
+    <i class="bi bi-exclamation-triangle fs-1 text-danger d-block mb-3 app-dialog-icon"></i>
+    <p class="app-dialog-message">@Message</p>
     @if (Details?.Any() == true)
     {
-        <ul class="text-start small">
+        <ul class="text-start small app-dialog-details">
             @foreach (var detail in Details)
             {
                 <li>@detail</li>
             }
         </ul>
     }
-    <button class="btn btn-secondary" @onclick="Close">Fechar</button>
+    <div class="app-dialog-actions">
+        <button class="btn btn-secondary" @onclick="Close">Fechar</button>
+    </div>
 </div>

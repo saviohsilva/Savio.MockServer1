@@ -1,0 +1,96 @@
+@page "/certificados/novo"
+@using Savio.MockServer.Services
+@using Savio.MockServer.Data.Entities
+@using Microsoft.AspNetCore.Identity
+@inject CertificateService CertificateService
+@inject NavigationManager Navigation
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Novo Certificado</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-file-earmark-lock2 me-2"></i>Novo Certificado</h1>
+            <p class="text-muted">Gera um certificado X.509 auto-assinado RSA-2048 armazenado no banco de dados.</p>
+        </div>
+        <div class="col-auto d-flex align-items-center">
+            <a href="/certificados" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Configurações do Certificado</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome (CN) *</label>
+                        <input type="text" class="form-control @(nameError != null ? "is-invalid" : string.Empty)"
+                               @bind="name" placeholder="Ex: meu-servico, api.empresa.com" />
+                        @if (nameError != null)
+                        {
+                            <div class="invalid-feedback">@nameError</div>
+                        }
+                        <small class="form-text text-muted">Será usado como CN (Common Name) do Subject. Ex: CN=meu-servico</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Senha do .pfx</label>
+                        <div class="input-group">
+                            <input type="@(showPassword ? "text" : "password")" class="form-control"
+                                   @bind="password" placeholder="Opcional — protege o arquivo .pfx" />
+                            <button class="btn btn-outline-secondary" type="button" @onclick="TogglePasswordVisibility">
+                                <i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                            </button>
+                        </div>
+                        <small class="form-text text-muted">Se informado, será exigida no download e na importação do certificado.</small>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-1"></i> @errorMessage
+                        </div>
+                    }
+                </div>
+                <div class="card-footer d-flex justify-content-end gap-2">
+                    <a href="/certificados" class="btn btn-secondary">Cancelar</a>
+                    <button class="btn btn-primary" @onclick="Generate" disabled="@isGenerating">
+                        @if (isGenerating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-shield-plus me-1"></i>
+                        }
+                        Gerar Certificado
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-1"></i>Informações</h6>
+                </div>
+                <div class="card-body cert-info-box">
+                    <ul class="mb-0 ps-3 small">
+                        <li>Algoritmo: <strong>RSA-2048</strong>, assinatura <strong>SHA-256</strong></li>
+                        <li>Validade: <strong>1 ano</strong> a partir da geração</li>
+                        <li>Tipo: certificado auto-assinado (self-signed)</li>
+                        <li>O arquivo <strong>.pfx</strong> contém a chave privada (use para importar no cliente)</li>
+                        <li>O arquivo <strong>.cer</strong> contém apenas a chave pública</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

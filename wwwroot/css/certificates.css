@@ -1,0 +1,115 @@
+/* ==========================================
+   CERTIFICATES & AUTH CONFIGS – estilos
+   ========================================== */
+
+/* ── Estado vazio ──────────────────────────── */
+.cert-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.cert-empty-icon {
+    font-size: 4rem;
+    opacity: 0.35;
+    margin-bottom: 1rem;
+    color: var(--color-primary, #FF6A00);
+}
+
+/* ── Cards de certificado ──────────────────── */
+.cert-card {
+    border-radius: 0.75rem;
+    transition: box-shadow 0.2s;
+}
+
+.cert-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.cert-card.cert-expired {
+    border-left: 4px solid var(--bs-danger, #dc3545);
+}
+
+.cert-card.cert-expiring {
+    border-left: 4px solid var(--bs-warning, #ffc107);
+}
+
+.cert-icon-wrap {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--color-primary-light, rgba(255, 106, 0, 0.12));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cert-icon {
+    font-size: 1.4rem;
+    color: #ffffff;
+}
+
+.cert-badge-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    justify-content: flex-end;
+}
+
+.cert-name {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    word-break: break-word;
+}
+
+.cert-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.cert-info-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    font-size: 0.82rem;
+}
+
+.cert-info-label {
+    color: var(--bs-secondary-color, #6c757d);
+    min-width: 80px;
+    flex-shrink: 0;
+}
+
+.cert-info-value {
+    word-break: break-all;
+}
+
+.cert-thumbprint {
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 0.78rem;
+    word-break: break-all;
+    cursor: pointer;
+}
+
+/* ── Info box no editor ────────────────────── */
+.cert-info-box {
+    background: var(--bs-light, #f8f9fa);
+    border-radius: 0.5rem;
+}
+
+/* ── Responsivo mobile ─────────────────────── */
+@media (max-width: 576px) {
+    .cert-card .card-footer {
+        flex-direction: column;
+    }
+
+    .cert-card .card-footer .btn {
+        width: 100%;
+    }
+}

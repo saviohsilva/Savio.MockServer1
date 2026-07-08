@@ -1,4 +1,4 @@
-using System.Text;
+Ôªøusing System.Text;
 using System.Text.Json;
 using Savio.MockServer.Data.Repositories;
 using Savio.MockServer.Data.Entities;
@@ -6,31 +6,18 @@ using Savio.MockServer.Services;
 
 namespace Savio.MockServer.Middleware;
 
-public class RequestHistoryMiddleware
+public class RequestHistoryMiddleware(RequestDelegate next, ILogger<RequestHistoryMiddleware> logger)
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<RequestHistoryMiddleware> _logger;
+    private readonly RequestDelegate _next = next;
+    private readonly ILogger<RequestHistoryMiddleware> _logger = logger;
     // Limite de 5MB para captura de texto do response body
     private const int MaxResponseBodySizeForCapture = 5 * 1024 * 1024;
 
-    public RequestHistoryMiddleware(RequestDelegate next, ILogger<RequestHistoryMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
-
     private static bool IsInternalRoute(string path)
     {
-        if (path == "/")
-            return true;
-
-        foreach (var prefix in MockEndpointMiddleware.InternalPrefixes)
-        {
-            if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        return false;
+        return path == "/"
+            || MockEndpointMiddleware.InternalPrefixes.Any(prefix =>
+                path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task InvokeAsync(HttpContext context,
@@ -40,7 +27,7 @@ public class RequestHistoryMiddleware
     {
         var path = context.Request.Path.Value ?? string.Empty;
 
-        // Ignorar rotas internas (Blazor, assets, p·ginas de gerenciamento)
+        // Ignorar rotas internas (Blazor, assets, p√°ginas de gerenciamento)
         if (IsInternalRoute(path))
         {
             await _next(context);
@@ -59,7 +46,7 @@ public class RequestHistoryMiddleware
         // Restaurar o stream original do response body
         context.Response.Body = originalBodyStream;
 
-        // Capturar response (texto apenas aqui; bin·rio ser· tratado no middleware do mock)
+        // Capturar response (texto apenas aqui; bin√°rio ser√° tratado no middleware do mock)
         var responseBodyText = await ReadResponseBodyAsTextAsync(responseBody);
         
         // Copiar response body de volta para o stream original
@@ -106,7 +93,7 @@ public class RequestHistoryMiddleware
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao salvar histÛrico para mock {Method} {Route}", context.Request.Method, context.Request.Path);
+                _logger.LogError(ex, "Erro ao salvar hist√≥rico para mock {Method} {Route}", context.Request.Method, context.Request.Path);
             }
         }
         else
@@ -148,8 +135,8 @@ public class RequestHistoryMiddleware
         {
             if (responseStream.Length > MaxResponseBodySizeForCapture)
             {
-                _logger.LogWarning("Response body muito grande ({Size} bytes), n„o ser· capturado completamente", responseStream.Length);
-                return $"[Response muito grande: {responseStream.Length} bytes - n„o capturado]";
+                _logger.LogWarning("Response body muito grande ({Size} bytes), n√£o ser√° capturado completamente", responseStream.Length);
+                return $"[Response muito grande: {responseStream.Length} bytes - n√£o capturado]";
             }
 
             responseStream.Seek(0, SeekOrigin.Begin);
@@ -167,7 +154,7 @@ public class RequestHistoryMiddleware
             }
             catch
             {
-                // Ignora erro ao tentar resetar posiÁ„o
+                // Ignora erro ao tentar resetar posi√ß√£o
             }
             return string.Empty;
         }

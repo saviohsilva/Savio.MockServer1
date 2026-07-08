@@ -61,7 +61,14 @@ public class MockService(IMockRepository repository, IMockGroupRepository groupR
     public async Task<(bool success, string? error)> UpdateMockAsync(MockEndpoint mock, string? userId = null)
     {
         var excludeId = int.TryParse(mock.Id, out int numericId) ? numericId : (int?)null;
-        var conflict = await CheckActiveConflictAsync(mock.Route, mock.Method, mock.IsActive, excludeId, userId);
+
+        var existing = await _repository.GetByIdAsync(numericId);
+        if (existing == null)
+        {
+            return (false, "Mock não encontrado.");
+        }
+
+        var conflict = await CheckActiveConflictAsync(mock.Route, mock.Method, mock.IsActive, excludeId, existing.UserId);
         if (conflict != null)
         {
             return (false, conflict);
@@ -69,7 +76,7 @@ public class MockService(IMockRepository repository, IMockGroupRepository groupR
 
         var entity = ModelToEntity(mock);
         entity.Id = numericId;
-        entity.UserId = userId;
+        entity.UserId = existing.UserId;
         await _repository.UpdateAsync(entity);
         return (true, null);
     }
@@ -380,7 +387,13 @@ public class MockService(IMockRepository repository, IMockGroupRepository groupR
             CreatedAt = entity.CreatedAt,
             MockGroupId = entity.MockGroupId,
             MockGroupName = entity.MockGroup?.Name,
-            MockGroupColor = entity.MockGroup?.Color
+            MockGroupColor = entity.MockGroup?.Color,
+            AuthConfigId = entity.AuthConfigId,
+            AuthConfigName = entity.AuthConfig?.Name,
+            AuthEndpointRole = entity.AuthEndpointRole,
+            RequireClientCertificate = entity.RequireClientCertificate,
+            RequiredClientCertificateId = entity.RequiredClientCertificateId,
+            RequiredClientCertificateThumbprint = entity.RequiredClientCertificate?.Thumbprint
         };
     }
 
@@ -404,7 +417,11 @@ public class MockService(IMockRepository repository, IMockGroupRepository groupR
             CallCount = model.CallCount,
             LastCalledAt = model.LastCalledAt,
             CreatedAt = model.CreatedAt,
-            MockGroupId = model.MockGroupId
+            MockGroupId = model.MockGroupId,
+            AuthConfigId = model.AuthConfigId,
+            AuthEndpointRole = model.AuthEndpointRole,
+            RequireClientCertificate = model.RequireClientCertificate,
+            RequiredClientCertificateId = model.RequiredClientCertificateId
         };
 
         entity.SetHeaders(model.Headers);

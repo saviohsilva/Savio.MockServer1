@@ -12,4 +12,6 @@ public sealed class RequestHistoryFilter
     public DateTime? ToUtc { get; set; }
     public bool IncludeMockEndpoint { get; set; } = true;
     public string? UserId { get; set; }
+    public string SortColumn { get; set; } = "requestedAt";
+    public bool SortAscending { get; set; } = false;
 }

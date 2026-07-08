@@ -1,11 +1,11 @@
-using System.Text.Json.Serialization;
+ï»¿using System.Text.Json.Serialization;
 
 namespace Savio.MockServer.Models;
 
 public sealed class MultipartPayload
 {
-    public List<FormField> Fields { get; set; } = new();
-    public List<FormFilePart> Files { get; set; } = new();
+    public List<FormField> Fields { get; set; } = [];
+    public List<FormFilePart> Files { get; set; } = [];
 
     public sealed class FormField
     {
@@ -21,8 +21,8 @@ public sealed class MultipartPayload
         public long Length { get; set; }
 
         /// <summary>
-        /// Conteúdo em Base64 quando persistido/transportado.
-        /// Evita depender de encoding de texto para binários.
+        /// ConteÃºdo em Base64 quando persistido/transportado.
+        /// Evita depender de encoding de texto para binÃ¡rios.
         /// </summary>
         public string? Base64 { get; set; }
 

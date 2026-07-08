@@ -1,4 +1,4 @@
-namespace Savio.MockServer.Models;
+﻿namespace Savio.MockServer.Models;
 
 public sealed class MockBinaryResponse
 {
@@ -6,7 +6,7 @@ public sealed class MockBinaryResponse
     public string ContentType { get; set; } = "application/octet-stream";
 
     /// <summary>
-    /// Conte�do do response em base64.
+    /// Conteúdo do response em base64.
     /// </summary>
     public string Base64 { get; set; } = string.Empty;
 }

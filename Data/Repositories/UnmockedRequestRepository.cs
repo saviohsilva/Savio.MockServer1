@@ -12,20 +12,20 @@ public class UnmockedRequestRepository : IUnmockedRequestRepository
         _context = context;
     }
 
-    public async Task<List<UnmockedRequestEntity>> GetAllAsync(int skip = 0, int take = 50)
+    public async Task<List<UnmockedRequestEntity>> GetAllAsync(string? userId = null, int skip = 0, int take = 50)
     {
         return await _context.UnmockedRequests
-            .Where(r => !r.MockCreated)
+            .Where(r => !r.MockCreated && r.UserId == userId)
             .OrderByDescending(r => r.LastSeenAt)
             .Skip(skip)
             .Take(take)
             .ToListAsync();
     }
 
-    public async Task<int> GetTotalCountAsync()
+    public async Task<int> GetTotalCountAsync(string? userId = null)
     {
         return await _context.UnmockedRequests
-            .Where(r => !r.MockCreated)
+            .Where(r => !r.MockCreated && r.UserId == userId)
             .CountAsync();
     }
 
@@ -34,15 +34,15 @@ public class UnmockedRequestRepository : IUnmockedRequestRepository
         return await _context.UnmockedRequests.FindAsync(id);
     }
 
-    public async Task<UnmockedRequestEntity?> GetByRouteAndMethodAsync(string route, string method)
+    public async Task<UnmockedRequestEntity?> GetByRouteAndMethodAsync(string route, string method, string? userId = null)
     {
         return await _context.UnmockedRequests
-            .FirstOrDefaultAsync(r => r.Route == route && r.Method == method && !r.MockCreated);
+            .FirstOrDefaultAsync(r => r.Route == route && r.Method == method && r.UserId == userId && !r.MockCreated);
     }
 
     public async Task<UnmockedRequestEntity> AddOrUpdateAsync(UnmockedRequestEntity entity)
     {
-        var existing = await GetByRouteAndMethodAsync(entity.Route, entity.Method);
+        var existing = await GetByRouteAndMethodAsync(entity.Route, entity.Method, entity.UserId);
         
         if (existing != null)
         {

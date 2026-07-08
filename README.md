@@ -30,13 +30,16 @@ O **Savio Mock Server** é uma aplicação web que permite criar, gerenciar e se
 - 🗂️ **Grupos de mocks** — Organize seus mocks em grupos para ativação/desativação em lote
 - 📦 **Upload binário** — Suporte a respostas com arquivos binários (imagens, PDFs, etc.)
 - 🔄 **Multipart responses** — Suporte a respostas multipart/form-data
-- 🎯 **Detecção de unmocked requests** — Captura requisições não mockadas e permite criar mocks a partir delas
+- 🎯 **Detecção de unmocked requests** — Captura requisições não mockadas e permite criar mocks a partir delas (isoladas por usuário)
 - ⏱️ **Delay configurável** — Simule latência nas respostas
 - 🌐 **Fuso horário do navegador** — Timestamps exibidos no horário local do cliente (UTC convertido via JavaScript)
 - 🎨 **Temas** — 3 temas visuais (Laranja, Preto/Verde, Azul Corporativo)
-- 🔒 **Autenticação** — Login, registro, confirmação de e-mail, MFA (TOTP e E-mail)
+- 🔒 **Autenticação** — Login, registro, confirmação de e-mail, MFA (TOTP e E-mail), recuperação e alteração de senha
 - 🛡️ **MFA** — Autenticação multifator via aplicativo autenticador (TOTP) ou e-mail
 - 🔐 **HTTPS** — Suporte nativo a HTTP e HTTPS via Kestrel
+- 🔑 **Mock de autenticação** — Simule fluxos de auth reais: Basic, Bearer (JWT), API Key e tokens customizados
+- 📜 **Certificados digitais** — Geração e gerenciamento de certificados X.509 auto-assinados para uso em mocks de autenticação (mTLS)
+- 📧 **Configuração SMTP pela interface** — Configure o servidor de e-mail pelo painel sem reiniciar a aplicação
 
 ---
 
@@ -45,19 +48,25 @@ O **Savio Mock Server** é uma aplicação web que permite criar, gerenciar e se
 ```
 Savio.MockServer/
 ├── Data/
-│   ├── Entities/           # Entidades do EF Core (ApplicationUser, MockEndpoint, RequestHistory, etc.)
-│   ├── Repositories/       # Padrão Repository (IMockRepository, IRequestHistoryRepository, etc.)
+│   ├── Entities/           # Entidades EF Core (ApplicationUser, MockEndpoint, RequestHistory,
+│   │                       #   MockAuthConfig, MockCertificate, EmailSetting, etc.)
+│   ├── Repositories/       # Padrão Repository (IMockRepository, IRequestHistoryRepository,
+│   │                       #   IMockAuthConfigRepository, IMockCertificateRepository, etc.)
 │   └── MockDbContext.cs    # IdentityDbContext com configurações do modelo
 ├── Models/                 # DTOs e modelos de domínio
-├── Services/               # Lógica de negócio (MockService, BrowserTimezoneService, SmtpEmailSender, etc.)
+├── Security/               # Constantes de roles (AppRoles)
+├── Services/               # Lógica de negócio (MockService, CertificateService, JwtTokenService,
+│                           #   MockAuthConfigService, EmailSettingService, SmtpEmailSender, etc.)
 ├── Middleware/             # Middlewares HTTP (MockEndpointMiddleware, RequestHistoryMiddleware)
 ├── Endpoints/              # Minimal API endpoints (AuthEndpoints)
 ├── Extensions/             # Extensões de IServiceCollection e IApplicationBuilder
-├── Helpers/                # Utilitários (UiHelpers)
+├── Helpers/                # Utilitários (UiHelpers, RouteTemplateHelper)
 ├── Pages/                  # Páginas Blazor com code-behind (.razor + .razor.cs)
-│   └── Account/            # Páginas de autenticação (Login, Register, MFA, Settings)
+│   └── Account/            # Autenticação (Login, Register, MFA, Settings, ChangePassword,
+│                           #   ForgotPassword, ResetPassword)
 ├── Shared/                 # Layouts (MainLayout, AuthLayout) com code-behind
-├── Components/             # Componentes reutilizáveis (ConfirmDialog, ErrorDialog, DateTimeLocalFilter)
+├── Components/             # Componentes reutilizáveis (ConfirmDialog, ErrorDialog,
+│                           #   InputDialog, DateTimeLocalFilter)
 ├── wwwroot/                # Assets estáticos (CSS, JS, imagens)
 └── Program.cs              # Entry point com toda a configuração
 ```
@@ -72,6 +81,8 @@ Savio.MockServer/
 | **Autenticação** | ASP.NET Identity |
 | **ORM** | Entity Framework Core 8.0 |
 | **Banco de Dados** | SQLite (padrão), MySQL, SQL Server |
+| **JWT** | System.IdentityModel.Tokens.Jwt + Microsoft.IdentityModel.Tokens |
+| **Criptografia** | BouncyCastle.Cryptography + ASP.NET Core Data Protection |
 | **UI Components** | Blazored.Modal, Blazored.Toast, Bootstrap 5, Bootstrap Icons |
 | **Servidor** | Kestrel (HTTP + HTTPS) |
 
@@ -138,7 +149,9 @@ Altere `Provider` para `SQLite`, `MySQL` ou `SQLServer`. As migrations são apli
 
 ### E-mail (SMTP)
 
-Para habilitar envio de e-mails (confirmação de conta, MFA por e-mail), configure a seção `Email`:
+O servidor de e-mail pode ser configurado de duas formas (a primeira tem prioridade sobre a segunda):
+
+#### Opção 1 — `appsettings.json` (maior prioridade)
 
 ```json
 {
@@ -152,6 +165,10 @@ Para habilitar envio de e-mails (confirmação de conta, MFA por e-mail), config
   }
 }
 ```
+
+#### Opção 2 — Painel da Aplicação (sem reiniciar)
+
+Acesse **Configurações da Conta → Configurações de E-mail (SMTP)** para configurar o SMTP diretamente pela interface. A senha é armazenada criptografada no banco via ASP.NET Core Data Protection.
 
 > **Gmail**: Gere uma [Senha de App](https://myaccount.google.com/apppasswords) (requer verificação em duas etapas na conta Google).
 
@@ -191,6 +208,7 @@ O perfil `https` (padrão) está configurado em `Properties/launchSettings.json`
    - **Response Headers**: Content-Type, etc.
    - **Response Body**: JSON, XML, HTML, binário ou multipart
    - **Delay** (opcional): Latência em milissegundos
+   - **Auth Config** (opcional): Vínculo com uma configuração de autenticação mock
 3. Salve o mock
 
 ### Acessando o Mock
@@ -219,7 +237,7 @@ Organize mocks em grupos para:
 
 ### Unmocked Requests
 
-Quando uma requisição chega em uma rota que não tem mock, ela é registrada na seção **Não Mockadas**. A partir daí, você pode criar um mock com um clique.
+Quando uma requisição chega em uma rota que não tem mock, ela é registrada na seção **Não Mockadas** (isolada por usuário). A partir daí, você pode criar um mock com um clique.
 
 ### Histórico de Requisições
 
@@ -233,6 +251,69 @@ Cada requisição recebida é registrada com:
 
 ---
 
+## 🔑 Mock de Autenticação
+
+O Savio Mock Server permite simular fluxos de autenticação reais. Configure em **Auth Configs** (`/auth-configs`).
+
+### Tipos suportados
+
+| Tipo | Descrição |
+|------|-----------|
+| `Basic` | Autenticação HTTP Basic (username + password em Base64) |
+| `Bearer` | Token JWT emitido e assinado pelo mock server |
+| `ApiKey` | Validação de chave de API em header customizado |
+| `CustomToken` | Credenciais e retorno de token totalmente configuráveis |
+
+### Papéis de Endpoint
+
+Cada endpoint mock pode assumir um de dois papéis em relação a uma Auth Config:
+
+- **TokenIssuer** — O endpoint *emite* tokens. Valida as credenciais da requisição e retorna um JWT real quando válidas. Ideal para simular um `POST /oauth/token` ou `POST /api/login`.
+- **Protected** — O endpoint *exige* autenticação. Só responde com o body configurado se o token recebido for válido.
+
+### Configurando uma Auth Config Bearer (JWT)
+
+1. Acesse **Auth Configs → Nova Configuração**
+2. Selecione o tipo **Bearer**
+3. Configure:
+   - **Username / Password**: Credenciais que a requisição deve enviar
+   - **Localização dos parâmetros**: `Body`, `QueryString` ou `Header`
+   - **JWT Secret Key**: Chave de assinatura do token (gerada automaticamente se omitida)
+   - **Expiração**: Tempo de validade em minutos (padrão: 60)
+   - **Issuer / Audience**: Opcionais
+   - **Claims adicionais**: JSON com claims extras (ex: `{"role": "admin", "email": "user@example.com"}`)
+4. Vincule a configuração a um endpoint mock com papel **TokenIssuer**
+
+### Exemplo de uso
+
+```bash
+# Solicitar token (endpoint com papel TokenIssuer)
+curl -X POST https://localhost:5101/meuhost/api/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "secret"}'
+
+# Acessar endpoint protegido (papel Protected)
+curl https://localhost:5101/meuhost/api/users \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+## 📜 Certificados Digitais
+
+Gerencie certificados X.509 auto-assinados em **Certificados** (`/certificados`).
+
+### Funcionalidades
+
+- **Geração automática**: Cria certificados RSA-2048 com SHA-256, validade de 1 ano
+- **Armazenamento seguro**: Dados `.pfx` armazenados diretamente no banco de dados (binário)
+- **Download**: Exporte o certificado em formato `.pfx` (com chave privada) ou `.pem` (chave pública)
+- **Senha opcional**: Proteja o `.pfx` com senha ao gerar
+- **Vinculação**: Associe certificados às Auth Configs para validação de certificado de cliente (mTLS)
+- **Por endpoint**: Configure um certificado de cliente obrigatório diretamente no endpoint mock
+
+---
+
 ## 🔒 Segurança
 
 ### Autenticação
@@ -240,6 +321,8 @@ Cada requisição recebida é registrada com:
 - **Registro**: E-mail + alias + senha (mínimo 6 caracteres)
 - **Confirmação de e-mail**: Obrigatória quando SMTP está configurado
 - **Lockout**: Conta bloqueada após 5 tentativas falhas (5 minutos)
+- **Recuperação de senha**: Solicite um link de redefinição em `/account/forgot-password`
+- **Alterar senha**: Página dedicada em `/account/change-password`
 
 ### Autenticação Multifator (MFA)
 
@@ -255,11 +338,18 @@ Dois métodos disponíveis:
 - O alias pode ser alterado nas Configurações da Conta
 - Ao alterar o alias, todas as URLs de mock mudam imediatamente
 
+### Roles
+
+| Role | Descrição |
+|------|-----------|
+| `Admin` | Acesso administrativo (configurações globais, e-mail, etc.) |
+
 ### Boas práticas de segurança
 
 - Banco de dados SQLite (`.db`) está no `.gitignore` — nunca commitado
 - `appsettings.Development.json` está no `.gitignore`
-- Credenciais SMTP devem ser configuradas via **User Secrets** ou variáveis de ambiente
+- Credenciais SMTP devem ser configuradas via **User Secrets**, variáveis de ambiente ou pelo painel da aplicação
+- A senha SMTP configurada pelo painel é criptografada com ASP.NET Core Data Protection
 - Strings de conexão com senhas reais nunca devem ser commitadas
 
 ---
@@ -296,15 +386,16 @@ Resposta:
 
 | Pasta | Conteúdo |
 |-------|---------|
-| `Data/Entities/` | 6 entidades EF Core |
-| `Data/Repositories/` | 4 interfaces + 4 implementações |
+| `Data/Entities/` | 9 entidades EF Core |
+| `Data/Repositories/` | 7 interfaces + 7 implementações |
 | `Models/` | DTOs e modelos de domínio |
-| `Services/` | MockService, BrowserTimezoneService, AliasService, SmtpEmailSender, etc. |
+| `Security/` | `AppRoles` (constantes de roles) |
+| `Services/` | MockService, CertificateService, JwtTokenService, MockAuthConfigService, EmailSettingService, SmtpEmailSender, etc. |
 | `Middleware/` | MockEndpointMiddleware, RequestHistoryMiddleware |
 | `Endpoints/` | AuthEndpoints (Minimal API) |
-| `Pages/` | 14 páginas Blazor + code-behind `.razor.cs` |
-| `Pages/Account/` | 8 páginas de autenticação + code-behind |
-| `Components/` | ConfirmDialog, ErrorDialog, DateTimeLocalFilter + code-behind |
+| `Pages/` | 18+ páginas Blazor + code-behind `.razor.cs` |
+| `Pages/Account/` | Login, Register, MFA, Settings, ChangePassword, ForgotPassword, ResetPassword |
+| `Components/` | ConfirmDialog, ErrorDialog, InputDialog, DateTimeLocalFilter + code-behind |
 | `Shared/` | MainLayout, AuthLayout, RedirectToLogin + code-behind |
 
 ### Executando em Desenvolvimento
@@ -329,10 +420,14 @@ Todos os arquivos Blazor seguem o padrão **code-behind**:
 |--------|--------|-----|
 | Blazored.Modal | 7.3.x | Diálogos modais |
 | Blazored.Toast | 4.2.x | Notificações toast |
+| BouncyCastle.Cryptography | 2.4.x | Criptografia avançada (exportação de chaves PEM) |
 | Microsoft.AspNetCore.Identity.EntityFrameworkCore | 8.0.x | Autenticação e autorização |
+| Microsoft.IdentityModel.Tokens | 8.x | Primitivas de segurança para JWT |
 | Microsoft.EntityFrameworkCore.Sqlite | 8.0.x | Provider SQLite |
 | Microsoft.EntityFrameworkCore.SqlServer | 8.0.x | Provider SQL Server |
 | Pomelo.EntityFrameworkCore.MySql | 8.0.x | Provider MySQL |
+| System.IdentityModel.Tokens.Jwt | 8.x | Geração e validação de tokens JWT |
+| System.Text.Encoding.CodePages | 10.x | Encodings adicionais |
 
 ---
 

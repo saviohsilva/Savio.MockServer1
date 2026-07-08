@@ -1,13 +1,10 @@
 ﻿@page "/mock/create"
 @page "/mock/edit/{Id}"
 @using Savio.MockServer.Services
-@using Savio.MockServer.Models
 @using Savio.MockServer.Data.Repositories
-@using System.Text.Json
-@using Microsoft.AspNetCore.WebUtilities
+@using Savio.MockServer.Data.Entities
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
-@using Savio.MockServer.Data.Entities
 @inject MockService MockService
 @inject IUnmockedRequestRepository UnmockedRepo
 @inject IMockBinaryStorage BinaryStorage
@@ -19,7 +16,9 @@
 <div class="container-fluid py-4">
     <div class="row mb-4">
         <div class="col">
-            <h1>@(IsEdit ? "Editar Mock" : "Novo Mock")</h1>
+            <h1>
+                <i class="bi @(IsEdit ? "bi-pencil-square" : "bi-plus-circle") me-2"></i>@(IsEdit ? "Editar Mock" : "Novo Mock")
+            </h1>
         </div>
         <div class="col-auto">
             <button class="btn btn-secondary" @onclick="Cancel">
@@ -27,6 +26,13 @@
             </button>
         </div>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(targetUserId))
+    {
+        <div class="alert alert-info py-2 mb-3">
+            <i class="bi bi-shield-lock"></i> <strong>Modo administrador:</strong> este mock será criado para o usuário <strong>@targetUserName</strong>.
+        </div>
+    }
 
     <div class="row">
         <div class="col-lg-8">
@@ -96,6 +102,288 @@
                         </div>
                     }
                 </div>
+            </div>
+
+            <!-- Autenticação -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-key me-2"></i>Autenticação</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Mode selector -->
+                    <div class="btn-group w-100 mb-2" role="group">
+                        <input type="radio" class="btn-check" name="authMode" id="authNone"
+                               checked="@(_authMode == "")" @onchange='() => OnAuthModeChanged("")' />
+                        <label class="btn btn-outline-secondary" for="authNone">
+                            <i class="bi bi-slash-circle me-1"></i>Nenhuma
+                        </label>
+                        <input type="radio" class="btn-check" name="authMode" id="authIssuer"
+                               checked="@(_authMode == "issuer")" @onchange='() => OnAuthModeChanged("issuer")' />
+                        <label class="btn btn-outline-primary" for="authIssuer">
+                            <i class="bi bi-key me-1"></i>Emite tokens
+                        </label>
+                        <input type="radio" class="btn-check" name="authMode" id="authProtected"
+                               checked="@(_authMode == "protected")" @onchange='() => OnAuthModeChanged("protected")' />
+                        <label class="btn btn-outline-warning" for="authProtected">
+                            <i class="bi bi-shield-check me-1"></i>Protegido
+                        </label>
+                    </div>
+                    <small class="form-text text-muted d-block mb-3">
+                        @if (_authMode == "issuer")
+                        {
+                            <span>Este endpoint valida credenciais e retorna tokens. Configure como os tokens serão gerados abaixo.</span>
+                        }
+                        else if (_authMode == "protected")
+                        {
+                            <span>Este endpoint exige um token válido emitido por outro endpoint configurado.</span>
+                        }
+                        else
+                        {
+                            <span>Sem autenticação — qualquer requisição é aceita.</span>
+                        }
+                    </small>
+
+                    @* ── EMITE TOKENS ── *@
+                    @if (_authMode == "issuer")
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de autenticação</label>
+                            <select class="form-select" @bind="inlineAuthConfig.Type" @bind:after="OnInlineTypeChanged">
+                                <option value="@MockAuthType.Basic">Basic (usuário + senha)</option>
+                                <option value="@MockAuthType.Bearer">Bearer / JWT</option>
+                                <option value="@MockAuthType.CustomToken">Token customizado</option>
+                                <option value="@MockAuthType.ApiKey">API Key</option>
+                            </select>
+                        </div>
+
+                        @if (inlineAuthConfig.Type == MockAuthType.Basic || inlineAuthConfig.Type == MockAuthType.Bearer)
+                        {
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Usuário</label>
+                                    <input type="text" class="form-control" @bind="inlineAuthConfig.Username"
+                                           placeholder="admin" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Senha</label>
+                                    <input type="password" class="form-control" @bind="inlineAuthConfig.Password"
+                                           placeholder="senha123" />
+                                </div>
+                            </div>
+                        }
+
+                        @if (inlineAuthConfig.Type == MockAuthType.CustomToken)
+                        {
+                            <div class="card mb-3 border-primary border-opacity-25">
+                                <div class="card-header d-flex justify-content-between align-items-center py-2 bg-primary bg-opacity-10">
+                                    <span class="small fw-semibold"><i class="bi bi-sliders me-1"></i>Parâmetros de validação</span>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddInlineValidationParam">
+                                        <i class="bi bi-plus"></i> Adicionar
+                                    </button>
+                                </div>
+                                <div class="card-body py-3">
+                                    @if (!inlineAuthConfig.CustomValidationParams.Any())
+                                    {
+                                        <p class="text-muted mb-0">Nenhum parâmetro de validação configurado.</p>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var param in inlineAuthConfig.CustomValidationParams)
+                                        {
+                                            <div class="row g-2 align-items-center mb-2">
+                                                <div class="col-md-4">
+                                                    <input type="text" class="form-control" @bind="param.Name" placeholder="Nome" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <select class="form-select" @bind="param.Location">
+                                                        <option value="@AuthParamLocation.Body">Body</option>
+                                                        <option value="@AuthParamLocation.QueryString">QueryString</option>
+                                                        <option value="@AuthParamLocation.Header">Header</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <input type="text" class="form-control" @bind="param.Value" placeholder="Valor esperado" />
+                                                </div>
+                                                <div class="col-md-1 d-grid">
+                                                    <button type="button" class="btn btn-outline-danger" @onclick="() => RemoveInlineValidationParam(param)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @if (inlineAuthConfig.Type == MockAuthType.Bearer || inlineAuthConfig.Type == MockAuthType.CustomToken)
+                        {
+                            <div class="card mb-3 border-primary border-opacity-25">
+                                <div class="card-header d-flex align-items-center justify-content-between py-2 bg-primary bg-opacity-10">
+                                    <span class="small fw-semibold"><i class="bi bi-shield-lock me-1"></i>Token JWT</span>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox"
+                                               @bind="inlineAuthConfig.GenerateJwtToken" id="jwtSwitch" />
+                                        <label class="form-check-label small" for="jwtSwitch">Gerar token real</label>
+                                    </div>
+                                </div>
+                                @if (inlineAuthConfig.GenerateJwtToken)
+                                {
+                                    <div class="card-body py-3">
+                                        <div class="alert alert-info py-2 small mb-3">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Quando ativado, este endpoint retorna um JWT assinado real. Endpoints no modo
+                                            <em>Protegido</em> que usem esta configuração validarão o token automaticamente.
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Secret Key</label>
+                                            <input type="text" class="form-control font-monospace"
+                                                   @bind="inlineAuthConfig.JwtSecretKey"
+                                                   placeholder="Deixe vazio para secret auto-gerada (mínimo 32 chars recomendado)" />
+                                        </div>
+                                        <div class="row g-3 mb-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label">Expiração (min)</label>
+                                                <input type="number" class="form-control"
+                                                       @bind="inlineAuthConfig.JwtExpirationMinutes" min="1" />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Issuer</label>
+                                                <input type="text" class="form-control"
+                                                       @bind="inlineAuthConfig.JwtIssuer" placeholder="Savio.MockServer" />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Audience</label>
+                                                <input type="text" class="form-control"
+                                                       @bind="inlineAuthConfig.JwtAudience" placeholder="Opcional" />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="form-label">Claims adicionais (JSON)</label>
+                                            <textarea class="form-control font-monospace" rows="2"
+                                                      @bind="inlineAuthConfig.JwtAdditionalClaimsJson"
+                                                      placeholder='{"role":"admin","tenant":"empresa"}'></textarea>
+                                            <small class="form-text text-muted">Claims extras incluídas no payload do token.</small>
+                                        </div>
+
+                                        @if (inlineAuthConfig.Type == MockAuthType.CustomToken)
+                                        {
+                                            <hr />
+                                            <h6 class="mb-3">Retorno do token</h6>
+                                            <div class="row g-3">
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Local</label>
+                                                    <select class="form-select" @bind="inlineAuthConfig.CustomTokenReturnLocation">
+                                                        <option value="@TokenReturnLocation.Body">Body</option>
+                                                        <option value="@TokenReturnLocation.Header">Header</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Nome</label>
+                                                    <input type="text" class="form-control" @bind="inlineAuthConfig.CustomTokenReturnName" placeholder="token" />
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">Prefixo</label>
+                                                    <input type="text" class="form-control" @bind="inlineAuthConfig.CustomTokenPrefix" placeholder="pre_" />
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">Sufixo</label>
+                                                    <input type="text" class="form-control" @bind="inlineAuthConfig.CustomTokenSuffix" placeholder="_suf" />
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        @if (inlineAuthConfig.Type == MockAuthType.ApiKey)
+                        {
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-5">
+                                    <label class="form-label">Header *</label>
+                                    <input type="text" class="form-control" @bind="inlineAuthConfig.ApiKeyHeader"
+                                           placeholder="X-API-Key" />
+                                </div>
+                                <div class="col-md-7">
+                                    <label class="form-label">Valor esperado *</label>
+                                    <input type="text" class="form-control font-monospace"
+                                           @bind="inlineAuthConfig.ApiKeyValue" placeholder="minha-chave-secreta" />
+                                </div>
+                            </div>
+                        }
+                    }
+
+                    @* ── PROTEGIDO ── *@
+                    @if (_authMode == "protected")
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Validado por</label>
+                            <select class="form-select" @bind="mock.AuthConfigId">
+                                <option value="">Selecione o endpoint de autenticação...</option>
+                                @foreach (var cfg in authConfigs)
+                                {
+                                    <option value="@cfg.Id">@cfg.Name</option>
+                                }
+                            </select>
+                            @if (!authConfigs.Any())
+                            {
+                                <div class="alert alert-warning py-2 small mt-2">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    Nenhum endpoint de autenticação configurado ainda. Crie um endpoint no modo
+                                    <em>Emite tokens</em> primeiro.
+                                </div>
+                            }
+                            else
+                            {
+                                <small class="form-text text-muted">
+                                    Requisições sem token válido deste emissor receberão <code>401 Unauthorized</code>.
+                                </small>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Certificado de Cliente (mTLS) -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-lock2 me-2"></i>Certificado de Cliente</h5>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" @bind="mock.RequireClientCertificate" id="endpointCertSwitch" />
+                        <label class="form-check-label small" for="endpointCertSwitch">Exigir mTLS</label>
+                    </div>
+                </div>
+                @if (mock.RequireClientCertificate)
+                {
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Certificado esperado</label>
+                            <select class="form-select" @bind="mock.RequiredClientCertificateId">
+                                <option value="">Qualquer certificado válido</option>
+                                @foreach (var cert in certificates)
+                                {
+                                    <option value="@cert.Id">@cert.Name — @cert.Thumbprint[..16]…</option>
+                                }
+                            </select>
+                            <small class="form-text text-muted">
+                                Se selecionado, apenas o certificado com este thumbprint será aceito.
+                                <a href="/certificados/novo" target="_blank" class="ms-1">Gerar novo certificado</a>
+                            </small>
+                        </div>
+                        <div class="alert alert-info py-2 small mb-0">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Para validar certificados mTLS, o Kestrel precisa estar configurado com
+                            <code>ClientCertificateMode.AllowCertificate</code> no <code>appsettings.json</code>.
+                        </div>
+                    </div>
+                }
+                @if (!mock.RequireClientCertificate)
+                {
+                    <div class="card-body py-2">
+                        <small class="text-muted">Sem exigência de certificado — qualquer cliente pode acessar este endpoint.</small>
+                    </div>
+                }
             </div>
 
             <div class="card mb-4">

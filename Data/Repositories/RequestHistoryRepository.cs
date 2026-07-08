@@ -66,6 +66,47 @@ public class RequestHistoryRepository(MockDbContext context) : IRequestHistoryRe
             .ToListAsync();
     }
 
+    public async Task<List<RequestHistoryListItem>> SearchListAsync(RequestHistoryFilter filter, int skip = 0, int take = 100)
+    {
+        var query = ApplyFilter(_context.RequestHistory.AsQueryable(), filter);
+
+        var ordered = (filter.SortColumn, filter.SortAscending) switch
+        {
+            ("method",    true)  => query.OrderBy(h => h.Method),
+            ("method",    false) => query.OrderByDescending(h => h.Method),
+            ("route",     true)  => query.OrderBy(h => h.Route),
+            ("route",     false) => query.OrderByDescending(h => h.Route),
+            ("status",    true)  => query.OrderBy(h => h.ResponseStatusCode),
+            ("status",    false) => query.OrderByDescending(h => h.ResponseStatusCode),
+            ("delay",     true)  => query.OrderBy(h => h.DelayMs),
+            ("delay",     false) => query.OrderByDescending(h => h.DelayMs),
+            ("ip",        true)  => query.OrderBy(h => h.ClientIp),
+            ("ip",        false) => query.OrderByDescending(h => h.ClientIp),
+            ("mock",      true)  => query.OrderBy(h => h.MockEndpoint != null ? h.MockEndpoint.Description : null),
+            ("mock",      false) => query.OrderByDescending(h => h.MockEndpoint != null ? h.MockEndpoint.Description : null),
+            _                    => filter.SortAscending
+                                        ? query.OrderBy(h => h.RequestedAt)
+                                        : query.OrderByDescending(h => h.RequestedAt),
+        };
+
+        return await ordered
+            .Skip(skip)
+            .Take(take)
+            .Select(h => new RequestHistoryListItem
+            {
+                Id = h.Id,
+                Method = h.Method,
+                Route = h.Route,
+                ResponseStatusCode = h.ResponseStatusCode,
+                DelayMs = h.DelayMs,
+                RequestedAt = h.RequestedAt,
+                ClientIp = h.ClientIp,
+                MockEndpointId = h.MockEndpointId,
+                MockEndpointDescription = h.MockEndpoint != null ? h.MockEndpoint.Description : null
+            })
+            .ToListAsync();
+    }
+
     public async Task<int> GetFilteredCountAsync(RequestHistoryFilter filter)
     {
         var query = ApplyFilter(_context.RequestHistory.AsQueryable(), filter);

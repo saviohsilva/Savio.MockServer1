@@ -15,13 +15,19 @@ public static class ServiceExtensions
         services.AddScoped<IRequestHistoryRepository, RequestHistoryRepository>();
         services.AddScoped<IUnmockedRequestRepository, UnmockedRequestRepository>();
         services.AddScoped<IMockGroupRepository, MockGroupRepository>();
+        services.AddScoped<IEmailSettingRepository, EmailSettingRepository>();
+        services.AddScoped<IMockCertificateRepository, MockCertificateRepository>();
+        services.AddScoped<IMockAuthConfigRepository, MockAuthConfigRepository>();
 
         // Services
         services.AddScoped<MockService>();
         services.AddScoped<IMockBinaryStorage, MockBinaryStorage>();
         services.AddScoped<AliasService>();
         services.AddScoped<BrowserTimezoneService>();
-        services.AddTransient<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<EmailSettingService>();
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<CertificateService>();
+        services.AddScoped<MockAuthConfigService>();
 
         // Blazor
         services.AddRazorPages();

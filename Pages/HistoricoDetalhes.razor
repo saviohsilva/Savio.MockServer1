@@ -1,10 +1,6 @@
 @page "/historico/{Id:int}"
 @using Savio.MockServer.Data.Repositories
-@using Savio.MockServer.Data.Entities
-@using Savio.MockServer.Models
 @using Savio.MockServer.Services
-@using System.Text.Json
-@using System.Text
 @inject IRequestHistoryRepository HistoryRepo
 @inject IMockBinaryStorage BinaryStorage
 @inject NavigationManager Navigation
@@ -41,6 +37,9 @@
                 </p>
             </div>
             <div class="col-auto d-flex gap-2 align-items-start">
+                <button class="btn btn-sm btn-outline-primary" @onclick="CopyRequestPayload">
+                    <i class="bi bi-copy"></i> Copiar Requisição
+                </button>
                 @if (history.MockEndpoint != null)
                 {
                     <button class="btn btn-sm btn-outline-secondary" @onclick="EditarMock">
@@ -60,8 +59,11 @@
             <!-- Informações Gerais -->
             <div class="col-12 mb-4">
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">ℹ️ Informações Gerais</h5>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="CopyGeneralInfo">
+                            <i class="bi bi-clipboard"></i> Copiar
+                        </button>
                     </div>
                     <div class="card-body">
                         <table class="table table-sm">
@@ -101,14 +103,17 @@
                 <!-- Request Headers -->
                 <div class="mb-4">
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">📤 Request Headers</h5>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="CopyRequestHeaders">
+                                <i class="bi bi-clipboard"></i> Copiar
+                            </button>
                         </div>
                         <div class="card-body">
                             @if (requestHeaders != null && requestHeaders.Any())
                             {
                                 <div class="table-responsive">
-                                <table class="table table-sm table-hover table-fixed">
+                                    <table class="table table-sm table-bordered mb-0 table-fixed table-resizable">
                                     <thead>
                                         <tr>
                                             <th class="col-th-40pct">Header</th>
@@ -140,8 +145,11 @@
                 {
                     <div class="mb-4">
                         <div class="card">
-                            <div class="card-header">
+                            <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">🔎 Query Params</h5>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="CopyQueryParams">
+                                    <i class="bi bi-clipboard"></i> Copiar
+                                </button>
                             </div>
                             <div class="card-body">
                                 <table class="table table-sm table-hover">
@@ -178,9 +186,9 @@
                                     <i class="bi @(requestBodyWrap ? "bi-text-wrap" : "bi-text-paragraph")"></i>
                                     @(requestBodyWrap ? "Linear" : "Quebrar")
                                 </button>
-                                @if (!string.IsNullOrEmpty(history.RequestBody))
+                                @if (CanCopyRequestBody())
                                 {
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => CopyToClipboard(history.RequestBody)">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="CopyRequestBody">
                                         <i class="bi bi-clipboard"></i> Copiar
                                     </button>
                                 }
@@ -217,8 +225,11 @@
                 <!-- Response Headers -->
                 <div class="mb-4">
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">📥 Response Headers</h5>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="CopyResponseHeaders">
+                                <i class="bi bi-clipboard"></i> Copiar
+                            </button>
                         </div>
                         <div class="card-body">
                             @if (responseHeaders != null && responseHeaders.Any())
@@ -257,9 +268,15 @@
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">📤 Response Body</h5>
                             <div class="d-flex gap-2">
-                                @if (!string.IsNullOrEmpty(history.ResponseBody) && !history.ResponseBody.StartsWith("[Response"))
+                                <button class="btn btn-sm @(responseBodyWrap ? "btn-outline-secondary" : "btn-secondary")"
+                                        title="@(responseBodyWrap ? "Modo linear (barra horizontal)" : "Modo com quebra de linha")"
+                                        @onclick="() => responseBodyWrap = !responseBodyWrap">
+                                    <i class="bi @(responseBodyWrap ? "bi-text-wrap" : "bi-text-paragraph")"></i>
+                                    @(responseBodyWrap ? "Linear" : "Quebrar")
+                                </button>
+                                @if (CanCopyResponseBody())
                                 {
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => CopyToClipboard(history.ResponseBody)">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="CopyResponseBody">
                                         <i class="bi bi-clipboard"></i> Copiar
                                     </button>
                                 }
@@ -293,7 +310,7 @@
                                         @if (IsTextContent(history.ResponseBodyContentType))
                                         {
                                             <h6 class="mt-3">Preview (primeiros 10.000 caracteres):</h6>
-                                            <pre class="bg-light p-3 rounded pre-scroll-500"><code>@GetTextPreview(responseBlobContent)</code></pre>
+                                            <pre class="bg-light p-3 rounded @(responseBodyWrap ? "pre-scroll-500-wrap" : "pre-scroll-500-linear")"><code>@GetTextPreview(responseBlobContent)</code></pre>
                                         }
                                     }
                                     else if (loadingBlobContent)
@@ -313,11 +330,11 @@
                             else if (!string.IsNullOrEmpty(history.ResponseBodyBase64))
                             {
                                 <p class="text-muted">Response binário - ContentType: <code>@history.ResponseBodyContentType</code></p>
-                                <pre class="bg-light p-3 rounded pre-scroll-200"><code>@history.ResponseBodyBase64</code></pre>
+                                <pre class="bg-light p-3 rounded @(responseBodyWrap ? "pre-scroll-200" : "pre-scroll-200-linear")"><code>@history.ResponseBodyBase64</code></pre>
                             }
                             else if (!string.IsNullOrEmpty(history.ResponseBody))
                             {
-                                <pre class="bg-light p-3 rounded pre-scroll-500"><code>@UiHelpers.FormatJson(history.ResponseBody)</code></pre>
+                                <pre class="bg-light p-3 rounded @(responseBodyWrap ? "pre-scroll-500-wrap" : "pre-scroll-500-linear")"><code>@UiHelpers.FormatJson(history.ResponseBody)</code></pre>
                             }
                             else
                             {

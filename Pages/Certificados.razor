@@ -1,0 +1,148 @@
+@page "/certificados"
+@using Savio.MockServer.Services
+@using Savio.MockServer.Data.Entities
+@using Microsoft.AspNetCore.Identity
+@inject CertificateService CertificateService
+@inject NavigationManager Navigation
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Certificados Digitais</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-file-earmark-lock2 me-2"></i>Certificados Digitais</h1>
+            <p class="text-muted">Gerencie certificados X.509 auto-assinados para uso nos mocks de autenticação.</p>
+        </div>
+        <div class="col-auto d-flex align-items-center">
+            <a href="/certificados/novo" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Novo Certificado
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(alertMessage))
+    {
+        <div class="alert @alertClass alert-dismissible fade show" role="alert">
+            <i class="bi @alertIcon me-1"></i> @alertMessage
+            <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+        </div>
+    }
+    else if (!certificates.Any())
+    {
+        <div class="cert-empty-state">
+            <i class="bi bi-shield-x cert-empty-icon"></i>
+            <h4>Nenhum certificado gerado</h4>
+            <p class="text-muted">Clique em <strong>Novo Certificado</strong> para gerar um certificado X.509 auto-assinado.</p>
+            <a href="/certificados/novo" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Gerar Certificado
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var cert in certificates)
+            {
+                <div class="col-12 col-md-6 col-xl-4">
+                    <div class="card cert-card h-100 @(IsExpired(cert) ? "cert-expired" : IsExpiringSoon(cert) ? "cert-expiring" : string.Empty)">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="cert-icon-wrap">
+                                    <i class="bi bi-file-earmark-lock2 cert-icon"></i>
+                                </div>
+                                <div class="cert-badge-group">
+                                    @if (IsExpired(cert))
+                                    {
+                                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Expirado</span>
+                                    }
+                                    else if (IsExpiringSoon(cert))
+                                    {
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Expirando</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Válido</span>
+                                    }
+                                    @if (cert.HasPassword)
+                                    {
+                                        <span class="badge bg-secondary ms-1"><i class="bi bi-lock me-1"></i>Senha</span>
+                                    }
+                                </div>
+                            </div>
+                            <h5 class="cert-name">@cert.Name</h5>
+                            <div class="cert-info">
+                                <div class="cert-info-row">
+                                    <span class="cert-info-label">Thumbprint</span>
+                                    <span class="cert-thumbprint" title="@cert.Thumbprint">@cert.Thumbprint[..16]…</span>
+                                </div>
+                                <div class="cert-info-row">
+                                    <span class="cert-info-label">Subject</span>
+                                    <span class="cert-info-value">@cert.Subject</span>
+                                </div>
+                                <div class="cert-info-row">
+                                    <span class="cert-info-label">Gerado em</span>
+                                    <span class="cert-info-value">@cert.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                                </div>
+                                <div class="cert-info-row">
+                                    <span class="cert-info-label">Expira em</span>
+                                    <span class="cert-info-value @(IsExpired(cert) ? "text-danger" : IsExpiringSoon(cert) ? "text-warning" : string.Empty)">
+                                        @cert.ExpiresAt.ToString("dd/MM/yyyy HH:mm")
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer d-flex gap-2 flex-wrap">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => DownloadPfx(cert.Id)" title="Baixar .pfx">
+                                <i class="bi bi-download"></i> .pfx
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => DownloadCer(cert.Id)" title="Baixar .cer (público)">
+                                <i class="bi bi-download"></i> .cer
+                            </button>
+                            <button class="btn btn-sm btn-outline-dark" @onclick="() => DownloadPemAndKey(cert.Id)" title="Baixar .pem + .key">
+                                <i class="bi bi-download"></i> .pem/.key
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" @onclick="() => CopyThumbprint(cert.Thumbprint)" title="Copiar thumbprint">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger ms-auto" @onclick="() => ConfirmDelete(cert)" title="Remover">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (certToDelete != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Confirmar remoção</h5>
+                    <button class="btn-close" @onclick="() => certToDelete = null"></button>
+                </div>
+                <div class="modal-body">
+                    Deseja remover o certificado <strong>@certToDelete.Name</strong>?
+                    Esta ação não pode ser desfeita. As configurações de auth que usam este certificado perderão a referência.
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => certToDelete = null">Cancelar</button>
+                    <button class="btn btn-danger" @onclick="ExecuteDelete"><i class="bi bi-trash me-1"></i>Remover</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

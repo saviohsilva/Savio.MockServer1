@@ -13,6 +13,8 @@ public class MockRepository(MockDbContext context) : IMockRepository
         var query = _context.MockEndpoints
             .AsNoTracking()
             .Include(m => m.MockGroup)
+            .Include(m => m.AuthConfig)
+            .Include(m => m.RequiredClientCertificate)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(userId))
@@ -23,7 +25,7 @@ public class MockRepository(MockDbContext context) : IMockRepository
 
     public async Task<List<MockEndpointEntity>> GetFilteredAsync(MockFilter filter)
     {
-        var query = ApplyFilter(_context.MockEndpoints.AsNoTracking().Include(m => m.MockGroup).AsQueryable(), filter);
+        var query = ApplyFilter(_context.MockEndpoints.AsNoTracking().Include(m => m.MockGroup).Include(m => m.AuthConfig).Include(m => m.RequiredClientCertificate).AsQueryable(), filter);
         return await query.OrderByDescending(m => m.CreatedAt).ToListAsync();
     }
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Savio.MockServer.Data.Entities;
 using Savio.MockServer.Models;
+using Savio.MockServer.Security;
 using Savio.MockServer.Services;
 using System.Text.Json;
 
@@ -19,6 +20,8 @@ public partial class MockEditor
     private Task<AuthenticationState>? AuthState { get; set; }
 
     [Inject] private BrowserTimezoneService TimezoneService { get; set; } = default!;
+    [Inject] private MockAuthConfigService AuthConfigService { get; set; } = default!;
+    [Inject] private CertificateService CertificateService { get; set; } = default!;
 
     private MockEndpoint mock = new()
     {
@@ -29,12 +32,34 @@ public partial class MockEditor
 
     private List<HeaderInput> headersInput = [];
     private List<MockGroup> groups = [];
+    private List<MockAuthConfig> authConfigs = [];
+    private List<MockCertificate> certificates = [];
+
+    // Auth mode: "" = nenhuma | "issuer" = emite tokens | "protected" = protegido
+    private string _authMode = "";
+    private MockAuthConfig inlineAuthConfig = new()
+    {
+        Type = MockAuthType.Bearer,
+        GenerateJwtToken = true,
+        JwtExpirationMinutes = 60,
+        UsernameParamName = "username",
+        PasswordParamName = "password",
+        UsernameParamLocation = AuthParamLocation.Body,
+        PasswordParamLocation = AuthParamLocation.Body,
+        CustomTokenReturnLocation = TokenReturnLocation.Body,
+        CustomTokenReturnName = "token"
+    };
+
     private bool useJson = true;
     private bool useBinary = false;
     private bool useMultipart = false;
     private bool IsEdit => !string.IsNullOrEmpty(Id);
     private string? saveError;
     private string? currentUserId;
+    /// <summary>UserId do usuário-alvo quando um admin cria mock para outro usuário.</summary>
+    private string? targetUserId;
+    /// <summary>Nome de exibição do usuário-alvo (para o banner informativo).</summary>
+    private string? targetUserName;
     private string returnUrl = "/mocks";
 
     private IBrowserFile? uploadedBinaryFile;
@@ -43,17 +68,15 @@ public partial class MockEditor
 
     protected override async Task OnInitializedAsync()
     {
-        if (AuthState != null)
-        {
-            var authState = await AuthState;
-            var user = await UserManager.GetUserAsync(authState.User);
-            currentUserId = user?.Id;
-        }
-
-        groups = await MockService.GetAllGroupsAsync(currentUserId);
-
         var uri = new Uri(Navigation.Uri);
         var queryParams = QueryHelpers.ParseQuery(uri.Query);
+
+        await LoadUserContextAsync(queryParams);
+
+        var effectiveUserId = targetUserId ?? currentUserId;
+        groups = await MockService.GetAllGroupsAsync(effectiveUserId);
+        authConfigs = await AuthConfigService.GetAllAsync(effectiveUserId);
+        certificates = await CertificateService.GetAllAsync(effectiveUserId);
 
         if (queryParams.TryGetValue("returnUrl", out var returnUrlParam) && !string.IsNullOrWhiteSpace(returnUrlParam))
         {
@@ -73,98 +96,192 @@ public partial class MockEditor
         }
 
         if (IsEdit && !string.IsNullOrEmpty(Id))
-        {
-            var existing = await MockService.GetMockByIdAsync(Id);
-            if (existing != null)
-            {
-                mock = existing;
-
-                useMultipart = !string.IsNullOrWhiteSpace(mock.ResponseMultipartJson);
-                useBinary = !useMultipart && (mock.ResponseBinaryBlobId.HasValue || !string.IsNullOrWhiteSpace(mock.ResponseBodyBase64));
-                useJson = !useMultipart && !useBinary && !string.IsNullOrEmpty(mock.ResponseBodyJson);
-
-                headersInput = [.. mock.Headers.Select(h => new HeaderInput { Key = h.Key, Value = h.Value })];
-            }
-        }
+            await LoadExistingMockAsync();
         else
-        {
             headersInput.Add(new HeaderInput { Key = "Content-Type", Value = "application/json" });
+    }
+
+    private async Task LoadUserContextAsync(Dictionary<string, Microsoft.Extensions.Primitives.StringValues> queryParams)
+    {
+        if (AuthState == null) return;
+
+        var authState = await AuthState;
+        var user = await UserManager.GetUserAsync(authState.User);
+        currentUserId = user?.Id;
+
+        // Admin pode criar mock para outro usuário (via targetUserId na query)
+        if (user != null
+            && queryParams.TryGetValue("targetUserId", out var targetParam)
+            && !string.IsNullOrWhiteSpace(targetParam)
+            && targetParam.ToString() != currentUserId
+            && await UserManager.IsInRoleAsync(user, AppRoles.Admin))
+        {
+            targetUserId = targetParam.ToString();
+            var targetUser = await UserManager.FindByIdAsync(targetUserId);
+            targetUserName = targetUser?.UserName ?? targetUserId;
+        }
+    }
+
+    private async Task LoadExistingMockAsync()
+    {
+        var existing = await MockService.GetMockByIdAsync(Id!);
+        if (existing == null) return;
+
+        mock = existing;
+
+        useMultipart = !string.IsNullOrWhiteSpace(mock.ResponseMultipartJson);
+        useBinary = !useMultipart && (mock.ResponseBinaryBlobId.HasValue || !string.IsNullOrWhiteSpace(mock.ResponseBodyBase64));
+        useJson = !useMultipart && !useBinary && !string.IsNullOrEmpty(mock.ResponseBodyJson);
+
+        headersInput = [.. mock.Headers.Select(h => new HeaderInput { Key = h.Key, Value = h.Value })];
+
+        // Restore auth mode
+        if (mock.AuthEndpointRole == MockAuthEndpointRole.TokenIssuer && mock.AuthConfigId.HasValue)
+        {
+            _authMode = "issuer";
+            var existingCfg = await AuthConfigService.GetByIdAsync(mock.AuthConfigId.Value);
+            if (existingCfg != null)
+                inlineAuthConfig = existingCfg;
+        }
+        else if (mock.AuthEndpointRole == MockAuthEndpointRole.Protected && mock.AuthConfigId.HasValue)
+        {
+            _authMode = "protected";
         }
     }
 
     private async Task LoadFromUnmockedRequest(int id)
     {
         var unmockedRequest = await UnmockedRepo.GetByIdAsync(id);
-        if (unmockedRequest != null)
+        if (unmockedRequest == null) return;
+
+        mock.Route = await ResolveRouteAliasAsync(unmockedRequest.Route ?? string.Empty);
+        mock.Method = unmockedRequest.Method;
+        mock.StatusCode = 200;
+        mock.IsActive = true;
+        mock.Description = $"Mock criado a partir de requisição capturada em {TimezoneService.FormatLocalTime(unmockedRequest.FirstSeenAt, "dd/MM/yyyy HH:mm:ss")}";
+
+        ParseUnmockedRequestHeaders(unmockedRequest.RequestHeadersJson);
+        SetDefaultResponseBody(unmockedRequest.RequestBody);
+
+        await UnmockedRepo.MarkAsMockCreatedAsync(id);
+    }
+
+    private async Task<string> ResolveRouteAliasAsync(string route)
+    {
+        var aliasUserId = targetUserId ?? currentUserId;
+        if (aliasUserId == null) return route;
+
+        var aliasOwner = await UserManager.FindByIdAsync(aliasUserId);
+        if (aliasOwner?.Alias == null) return route;
+
+        var aliasPrefix = $"/{aliasOwner.Alias}";
+        if (!route.StartsWith(aliasPrefix, StringComparison.OrdinalIgnoreCase)) return route;
+
+        route = route[aliasPrefix.Length..];
+        return route.StartsWith('/') ? route : "/" + route;
+    }
+
+    private void ParseUnmockedRequestHeaders(string? requestHeadersJson)
+    {
+        if (string.IsNullOrEmpty(requestHeadersJson)) return;
+
+        try
         {
-            var route = unmockedRequest.Route ?? string.Empty;
-            if (currentUserId != null)
+            var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(requestHeadersJson);
+            if (headers != null)
             {
-                var user = await UserManager.FindByIdAsync(currentUserId);
-                if (user?.Alias != null)
-                {
-                    var aliasPrefix = $"/{user.Alias}";
-                    if (route.StartsWith(aliasPrefix, StringComparison.OrdinalIgnoreCase))
-                    {
-                        route = route[aliasPrefix.Length..];
-                        if (!route.StartsWith('/'))
-                            route = "/" + route;
-                    }
-                }
+                headersInput = [.. headers
+                    .Where(h => !h.Key.StartsWith(':') &&
+                               !h.Key.Equals("Host", StringComparison.OrdinalIgnoreCase) &&
+                               !h.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
+                    .Select(h => new HeaderInput { Key = h.Key, Value = h.Value })];
             }
-            mock.Route = route;
-            mock.Method = unmockedRequest.Method;
-            mock.StatusCode = 200;
-            mock.IsActive = true;
-            mock.Description = $"Mock criado a partir de requisição capturada em {TimezoneService.FormatLocalTime(unmockedRequest.FirstSeenAt, "dd/MM/yyyy HH:mm:ss")}";
+        }
+        catch
+        {
+            headersInput.Add(new HeaderInput { Key = "Content-Type", Value = "application/json" });
+        }
 
-            if (!string.IsNullOrEmpty(unmockedRequest.RequestHeadersJson))
-            {
-                try
-                {
-                    var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(unmockedRequest.RequestHeadersJson);
-                    if (headers != null)
-                    {
-                        headersInput = [.. headers
-                            .Where(h => !h.Key.StartsWith(':') &&
-                                       !h.Key.Equals("Host", StringComparison.OrdinalIgnoreCase) &&
-                                       !h.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
-                            .Select(h => new HeaderInput { Key = h.Key, Value = h.Value })];
-                    }
-                }
-                catch
-                {
-                    headersInput.Add(new HeaderInput { Key = "Content-Type", Value = "application/json" });
-                }
-            }
+        if (headersInput.Count == 0)
+            headersInput.Add(new HeaderInput { Key = "Content-Type", Value = "application/json" });
+    }
 
-            if (headersInput.Count == 0)
-            {
-                headersInput.Add(new HeaderInput { Key = "Content-Type", Value = "application/json" });
-            }
-
-            if (!string.IsNullOrEmpty(unmockedRequest.RequestBody))
-            {
-                mock.ResponseBodyJson = @"{
+    private void SetDefaultResponseBody(string? requestBody)
+    {
+        if (!string.IsNullOrEmpty(requestBody))
+        {
+            mock.ResponseBodyJson = @"{
   ""success"": true,
   ""message"": ""Mock response - ajuste conforme necessário"",
-  ""data"": " + unmockedRequest.RequestBody + @"
+  ""data"": " + requestBody + @"
 }";
-                useJson = true;
-                useBinary = false;
-            }
-            else
-            {
-                mock.ResponseBodyJson = @"{
+        }
+        else
+        {
+            mock.ResponseBodyJson = @"{
   ""success"": true,
   ""message"": ""Mock response criado automaticamente""
 }";
-                useJson = true;
-                useBinary = false;
-            }
-
-            await UnmockedRepo.MarkAsMockCreatedAsync(id);
         }
+        useJson = true;
+        useBinary = false;
+    }
+
+    private void OnAuthModeChanged(string mode)
+    {
+        _authMode = mode;
+        switch (mode)
+        {
+            case "issuer":
+                mock.AuthEndpointRole = MockAuthEndpointRole.TokenIssuer;
+                if (!mock.AuthConfigId.HasValue)
+                {
+                    inlineAuthConfig = new MockAuthConfig
+                    {
+                        Type = MockAuthType.Bearer,
+                        GenerateJwtToken = true,
+                        JwtExpirationMinutes = 60,
+                        CustomTokenReturnLocation = TokenReturnLocation.Body,
+                        CustomTokenReturnName = "token"
+                    };
+                }
+                break;
+            case "protected":
+                mock.AuthEndpointRole = MockAuthEndpointRole.Protected;
+                mock.AuthConfigId = null;
+                break;
+            default:
+                mock.AuthEndpointRole = null;
+                mock.AuthConfigId = null;
+                break;
+        }
+    }
+
+    private void OnInlineTypeChanged()
+    {
+        if (inlineAuthConfig.Type != MockAuthType.Bearer && inlineAuthConfig.Type != MockAuthType.CustomToken)
+            inlineAuthConfig.GenerateJwtToken = false;
+        if (inlineAuthConfig.Type != MockAuthType.ApiKey)
+        {
+            inlineAuthConfig.ApiKeyHeader = null;
+            inlineAuthConfig.ApiKeyValue = null;
+        }
+
+        if (inlineAuthConfig.Type == MockAuthType.CustomToken)
+        {
+            inlineAuthConfig.GenerateJwtToken = true;
+            inlineAuthConfig.CustomTokenReturnName ??= "token";
+        }
+    }
+
+    private void AddInlineValidationParam()
+    {
+        inlineAuthConfig.CustomValidationParams.Add(new AuthValidationParam());
+    }
+
+    private void RemoveInlineValidationParam(AuthValidationParam param)
+    {
+        inlineAuthConfig.CustomValidationParams.Remove(param);
     }
 
     private void AddHeader()
@@ -331,9 +448,15 @@ public partial class MockEditor
             .Where(h => !string.IsNullOrEmpty(h.Key))
             .ToDictionary(h => h.Key, h => h.Value ?? string.Empty);
 
+        // Quando admin cria para outro usuário, o mock pertence ao usuário-alvo
+        var effectiveUserId = targetUserId ?? currentUserId;
+
+        if (!await ApplyAuthModeAsync(effectiveUserId))
+            return;
+
         if (IsEdit)
         {
-            var (success, error) = await MockService.UpdateMockAsync(mock, currentUserId);
+            var (success, error) = await MockService.UpdateMockAsync(mock, effectiveUserId);
             if (!success)
             {
                 saveError = error;
@@ -342,7 +465,7 @@ public partial class MockEditor
         }
         else
         {
-            var (success, error) = await MockService.AddMockAsync(mock, currentUserId);
+            var (success, error) = await MockService.AddMockAsync(mock, effectiveUserId);
             if (!success)
             {
                 saveError = error;
@@ -351,6 +474,67 @@ public partial class MockEditor
         }
 
         Navigation.NavigateTo(returnUrl);
+    }
+
+    /// <summary>Applies auth mode to the mock and returns false if validation failed.</summary>
+    private async Task<bool> ApplyAuthModeAsync(string? effectiveUserId)
+    {
+        if (_authMode == "issuer")
+        {
+            inlineAuthConfig.CustomValidationParams = inlineAuthConfig.CustomValidationParams
+                .Where(p => !string.IsNullOrWhiteSpace(p.Name))
+                .Select(p => new AuthValidationParam
+                {
+                    Name = p.Name.Trim(),
+                    Value = p.Value ?? string.Empty,
+                    Location = p.Location
+                })
+                .ToList();
+
+            if (inlineAuthConfig.Type == MockAuthType.CustomToken && inlineAuthConfig.CustomValidationParams.Count == 0)
+            {
+                saveError = "Adicione ao menos um parâmetro de validação para Token customizado.";
+                return false;
+            }
+
+            // Auto-generate name from route+method when not provided
+            if (string.IsNullOrWhiteSpace(inlineAuthConfig.Name))
+                inlineAuthConfig.Name = $"{mock.Method} {mock.Route}";
+
+            if (mock.AuthConfigId.HasValue)
+            {
+                // Edit mode: update existing auth config
+                inlineAuthConfig.Id = mock.AuthConfigId.Value;
+                var (authOk, authErr) = await AuthConfigService.UpdateAsync(inlineAuthConfig);
+                if (!authOk)
+                {
+                    saveError = $"Erro ao atualizar configuração de autenticação: {authErr}";
+                    return false;
+                }
+            }
+            else
+            {
+                // Create new auth config linked to this endpoint
+                var (authOk, authErr, newAuthId) = await AuthConfigService.AddAsync(inlineAuthConfig, effectiveUserId);
+                if (!authOk)
+                {
+                    saveError = $"Erro ao salvar configuração de autenticação: {authErr}";
+                    return false;
+                }
+                mock.AuthConfigId = newAuthId;
+            }
+            mock.AuthEndpointRole = MockAuthEndpointRole.TokenIssuer;
+        }
+        else if (_authMode == "protected")
+        {
+            mock.AuthEndpointRole = MockAuthEndpointRole.Protected;
+        }
+        else
+        {
+            mock.AuthConfigId = null;
+            mock.AuthEndpointRole = null;
+        }
+        return true;
     }
 
     private void Cancel()

@@ -1,0 +1,16 @@
+<div class="app-dialog-content">
+    <i class="bi @Icon fs-1 text-@IconColor d-block mb-3 app-dialog-icon text-center"></i>
+    <p class="app-dialog-message text-center">@Message</p>
+    <div class="mb-3">
+        <input type="@InputType"
+               class="form-control"
+               placeholder="@Placeholder"
+               @bind="inputValue"
+               @bind:event="oninput"
+               @onkeydown="OnKeyDown" />
+    </div>
+    <div class="d-flex justify-content-center gap-2 app-dialog-actions">
+        <button class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
+        <button class="btn btn-@IconColor" @onclick="Confirm">OK</button>
+    </div>
+</div>

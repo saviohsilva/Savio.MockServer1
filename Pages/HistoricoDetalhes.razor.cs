@@ -1,5 +1,8 @@
+using Blazored.Modal;
+using Blazored.Modal.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Savio.MockServer.Components;
 using Savio.MockServer.Data.Entities;
 using Savio.MockServer.Services;
 using System.Text;
@@ -9,6 +12,10 @@ namespace Savio.MockServer.Pages;
 
 public partial class HistoricoDetalhes
 {
+    private const string EmptyLabel = "(vazio)";
+    [CascadingParameter]
+    public IModalService Modal { get; set; } = default!;
+
     [Inject] private BrowserTimezoneService TimezoneService { get; set; } = default!;
 
     [Parameter]
@@ -16,6 +23,7 @@ public partial class HistoricoDetalhes
 
     private bool isLoading = true;
     private bool requestBodyWrap = true;
+    private bool responseBodyWrap = true;
     private RequestHistoryEntity? history;
     private Dictionary<string, string>? requestHeaders;
     private Dictionary<string, string>? responseHeaders;
@@ -60,7 +68,11 @@ public partial class HistoricoDetalhes
             return;
         }
 
-        var confirmed = await Js.InvokeAsync<bool>("confirm", "Confirma a exclusão deste item do histórico?");
+        var confirmed = await ConfirmActionAsync(
+            "Confirmar Exclusão",
+            "Confirma a exclusão deste item do histórico?",
+            "bi-trash",
+            "danger");
         if (!confirmed)
         {
             return;
@@ -98,6 +110,229 @@ public partial class HistoricoDetalhes
         catch
         {
             // Clipboard API may be unavailable in non-secure contexts; ignore
+        }
+    }
+
+    private async Task CopyRequestPayload()
+    {
+        if (history == null)
+        {
+            return;
+        }
+
+        await CopyToClipboard(BuildRequestPayloadText());
+    }
+
+    private async Task CopyGeneralInfo()
+    {
+        if (history == null)
+        {
+            return;
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"Method: {history.Method}");
+        sb.AppendLine($"Route: {history.Route}");
+        sb.AppendLine($"Data/Hora: {TimezoneService.FormatLocalTime(history.RequestedAt, "dd/MM/yyyy HH:mm:ss")}");
+        sb.AppendLine($"StatusCode: {history.ResponseStatusCode}");
+        sb.AppendLine($"DelayMs: {history.DelayMs}");
+        sb.AppendLine($"ClientIp: {history.ClientIp}");
+        if (history.MockEndpoint != null)
+        {
+            sb.AppendLine($"Mock: {history.MockEndpoint.Description}");
+        }
+
+        await CopyToClipboard(sb.ToString().TrimEnd());
+    }
+
+    private async Task CopyRequestHeaders()
+    {
+        await CopyToClipboard(FormatDictionaryForCopy("Request Headers", requestHeaders));
+    }
+
+    private async Task CopyQueryParams()
+    {
+        await CopyToClipboard(FormatDictionaryForCopy("Query Params", queryParams));
+    }
+
+    private async Task CopyRequestBody()
+    {
+        await CopyToClipboard(GetRequestBodyForCopy());
+    }
+
+    private async Task CopyResponseHeaders()
+    {
+        await CopyToClipboard(FormatDictionaryForCopy("Response Headers", responseHeaders));
+    }
+
+    private async Task CopyResponseBody()
+    {
+        await CopyToClipboard(GetResponseBodyForCopy());
+    }
+
+    private bool CanCopyRequestBody()
+    {
+        return !string.IsNullOrWhiteSpace(GetRequestBodyForCopy());
+    }
+
+    private bool CanCopyResponseBody()
+    {
+        return !string.IsNullOrWhiteSpace(GetResponseBodyForCopy());
+    }
+
+    private string BuildRequestPayloadText()
+    {
+        if (history == null)
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("##### Informações Gerais");
+        sb.AppendLine($"Method: {history.Method}");
+        sb.AppendLine($"Route: {history.Route}");
+        sb.AppendLine($"Data/Hora: {TimezoneService.FormatLocalTime(history.RequestedAt, "dd/MM/yyyy HH:mm:ss")}");
+        sb.AppendLine($"StatusCode: {history.ResponseStatusCode}");
+        sb.AppendLine($"DelayMs: {history.DelayMs}");
+        sb.AppendLine($"ClientIp: {history.ClientIp}");
+        if (history.MockEndpoint != null)
+        {
+            sb.AppendLine($"Mock: {history.MockEndpoint.Description}");
+        }
+        if (queryParams != null && queryParams.Count > 0)
+        {
+            sb.AppendLine("Query Params:");
+            foreach (var param in queryParams.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                sb.AppendLine($"- {param.Key}: {param.Value}");
+            }
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("##### Request Headers");
+        AppendDictionaryLines(sb, requestHeaders);
+
+        sb.AppendLine();
+        sb.AppendLine("##### Response Headers");
+        AppendDictionaryLines(sb, responseHeaders);
+
+        sb.AppendLine();
+        sb.AppendLine("##### Request Body");
+        var requestBody = GetRequestBodyForCopy();
+        sb.AppendLine(string.IsNullOrWhiteSpace(requestBody) ? EmptyLabel : requestBody);
+
+        sb.AppendLine();
+        sb.AppendLine("##### Response Body");
+        var responseBody = GetResponseBodyForCopy();
+        sb.AppendLine(string.IsNullOrWhiteSpace(responseBody) ? EmptyLabel : responseBody);
+
+        return sb.ToString().TrimEnd();
+    }
+
+    private string GetRequestBodyForCopy()
+    {
+        if (history == null)
+        {
+            return string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(history.RequestFormJson))
+        {
+            return NormalizeJsonIfPossible(history.RequestFormJson);
+        }
+
+        if (!string.IsNullOrWhiteSpace(history.RequestBody))
+        {
+            return NormalizeJsonIfPossible(history.RequestBody);
+        }
+
+        if (!string.IsNullOrWhiteSpace(history.RequestBodyBase64))
+        {
+            return history.RequestBodyBase64;
+        }
+
+        return string.Empty;
+    }
+
+    private string GetResponseBodyForCopy()
+    {
+        if (history == null)
+        {
+            return string.Empty;
+        }
+
+        if (history.ResponseBinaryBlobId.HasValue)
+        {
+            if (responseBlobContent != null && IsTextContent(history.ResponseBodyContentType))
+            {
+                return GetTextPreview(responseBlobContent);
+            }
+
+            return "[Response body armazenado como blob. Use o botao de download para obter o arquivo completo.]";
+        }
+
+        if (!string.IsNullOrWhiteSpace(history.ResponseBodyBase64))
+        {
+            return history.ResponseBodyBase64;
+        }
+
+        if (!string.IsNullOrWhiteSpace(history.ResponseBody) && !history.ResponseBody.StartsWith("[Response"))
+        {
+            return NormalizeJsonIfPossible(history.ResponseBody);
+        }
+
+        return string.Empty;
+    }
+
+    private static void AppendDictionaryLines(StringBuilder sb, Dictionary<string, string>? dict)
+    {
+        if (dict != null && dict.Count > 0)
+        {
+            foreach (var item in dict.OrderBy(v => v.Key, StringComparer.OrdinalIgnoreCase))
+                sb.AppendLine($"{item.Key}: {item.Value}");
+        }
+        else
+        {
+            sb.AppendLine(EmptyLabel);
+        }
+    }
+
+    private static string FormatDictionaryForCopy(string title, Dictionary<string, string>? values)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"=== {title} ===");
+
+        if (values == null || values.Count == 0)
+        {
+            sb.AppendLine(EmptyLabel);
+            return sb.ToString().TrimEnd();
+        }
+
+        foreach (var item in values.OrderBy(v => v.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            sb.AppendLine($"{item.Key}: {item.Value}");
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    private static readonly JsonSerializerOptions _indentedWriteOptions = new() { WriteIndented = true };
+
+    private static string NormalizeJsonIfPossible(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(value);
+            return JsonSerializer.Serialize(doc.RootElement, _indentedWriteOptions);
+        }
+        catch
+        {
+            return value;
         }
     }
 
@@ -215,5 +450,19 @@ public partial class HistoricoDetalhes
             len /= 1024;
         }
         return $"{len:0.##} {sizes[order]}";
+    }
+
+    private async Task<bool> ConfirmActionAsync(string title, string message, string icon, string iconColor)
+    {
+        var parameters = new ModalParameters
+        {
+            { nameof(ConfirmDialog.Message), message },
+            { nameof(ConfirmDialog.Icon), icon },
+            { nameof(ConfirmDialog.IconColor), iconColor }
+        };
+
+        var modal = Modal.Show<ConfirmDialog>(title, parameters, new ModalOptions { Size = ModalSize.Small });
+        var result = await modal.Result;
+        return !result.Cancelled;
     }
 }

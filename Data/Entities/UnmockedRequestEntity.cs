@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+Ôªøusing System.ComponentModel.DataAnnotations;
 
 namespace Savio.MockServer.Data.Entities;
 
@@ -17,13 +17,13 @@ public class UnmockedRequestEntity
     
     public string? RequestHeadersJson { get; set; }
     
-    // Texto (json/raw) quando aplic·vel
+    // Texto (json/raw) quando aplic√°vel
     public string? RequestBody { get; set; }
     
     // Multipart/form-data ou x-www-form-urlencoded normalizado em JSON
     public string? RequestFormJson { get; set; }
     
-    // Conte˙do bin·rio do request quando aplic·vel (base64)
+    // Conte√∫do bin√°rio do request quando aplic√°vel (base64)
     public string? RequestBodyBase64 { get; set; }
     public string? RequestBodyContentType { get; set; }
     public string? RequestBodyFileName { get; set; }
@@ -40,4 +40,7 @@ public class UnmockedRequestEntity
     public bool MockCreated { get; set; } = false;
     
     public DateTime? MockCreatedAt { get; set; }
+
+    [MaxLength(450)]
+    public string? UserId { get; set; }
 }

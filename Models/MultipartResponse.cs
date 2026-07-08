@@ -1,26 +1,26 @@
-namespace Savio.MockServer.Models;
+ï»¿namespace Savio.MockServer.Models;
 
 public sealed class MultipartResponse
 {
     public string Subtype { get; set; } = "mixed"; // mixed|form-data|related
-    public List<Part> Parts { get; set; } = new();
+    public List<Part> Parts { get; set; } = [];
 
     public sealed class Part
     {
-        public Dictionary<string, string> Headers { get; set; } = new();
+        public Dictionary<string, string> Headers { get; set; } = [];
 
         /// <summary>
-        /// Quando preenchido, o conteúdo da parte é texto (UTF-8).
+        /// Quando preenchido, o conteÃºdo da parte Ã© texto (UTF-8).
         /// </summary>
         public string? Text { get; set; }
 
         /// <summary>
-        /// Opção antiga: conteúdo binário da parte em Base64.
+        /// OpÃ§Ã£o antiga: conteÃºdo binÃ¡rio da parte em Base64.
         /// </summary>
         public string? Base64 { get; set; }
 
         /// <summary>
-        /// Nova opção: referência a um blob persistido no banco.
+        /// Nova opÃ§Ã£o: referÃªncia a um blob persistido no banco.
         /// </summary>
         public int? BlobId { get; set; }
 

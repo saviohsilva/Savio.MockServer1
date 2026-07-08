@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Savio Mock Server - JavaScript Principal
  * Funcoes utilitarias e interacoes do cliente
  */
@@ -18,6 +18,7 @@
         console.log('Savio Mock Server - Inicializado');
         initializeTooltips();
         initializeSidebarToggle();
+        initializeResizableTables();
     });
 
     function initializeTooltips() {
@@ -33,33 +34,17 @@
 
     function initializeSidebarToggle() {
         var sidebar = document.querySelector('.sidebar');
-        var toggleButton = document.querySelector('.navbar-toggler');
+        var page = document.querySelector('.page');
 
-        if (!sidebar || !toggleButton) return;
+        if (!sidebar || !page) return;
 
-        if (window.innerWidth < 768) {
-            sidebar.classList.add('collapse');
-        }
-
-        toggleButton.addEventListener('click', function (event) {
-            event.stopPropagation();
-            sidebar.classList.toggle('collapse');
-        });
-
-        document.addEventListener('click', function (event) {
-            if (window.innerWidth < 768) {
-                var isClickInsideSidebar = sidebar.contains(event.target);
-                var isToggleButton = toggleButton.contains(event.target);
-                if (!isClickInsideSidebar && !isToggleButton && !sidebar.classList.contains('collapse')) {
-                    sidebar.classList.add('collapse');
-                }
-            }
-        });
+        // Remove stale offcanvas class from older behavior.
+        sidebar.classList.remove('collapse');
 
         sidebar.querySelectorAll('.nav-link').forEach(function (link) {
             link.addEventListener('click', function () {
                 if (window.innerWidth < 768) {
-                    sidebar.classList.add('collapse');
+                    window.setSidebarCollapsedState(true);
                 }
             });
         });
@@ -67,17 +52,75 @@
         window.addEventListener('resize', function () {
             if (window.innerWidth >= 768) {
                 sidebar.classList.remove('collapse');
-            } else {
-                sidebar.classList.add('collapse');
             }
         });
     }
 
-    // ── Funcoes expostas para Blazor JS Interop ────────────────────────────
+    function initializeResizableTables() {
+        document.querySelectorAll('table.table-resizable').forEach(function (table) {
+            if (table.dataset.resizeInitialized === 'true') return;
+            table.dataset.resizeInitialized = 'true';
 
-    window.confirmAction = function (message) {
-        return confirm(message);
-    };
+            var headerRow = table.querySelector('thead tr');
+            if (!headerRow) return;
+
+            var headers = Array.from(headerRow.querySelectorAll('th'));
+            var bodyRows = Array.from(table.querySelectorAll('tbody tr'));
+
+            headers.forEach(function (header, columnIndex) {
+                if (header.querySelector('.column-resize-handle')) return;
+
+                var handle = document.createElement('span');
+                handle.className = 'column-resize-handle';
+                handle.title = 'Arraste para redimensionar';
+                header.appendChild(handle);
+
+                handle.addEventListener('pointerdown', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    var startX = event.clientX;
+                    var startWidth = header.getBoundingClientRect().width;
+                    var minWidth = Math.max(72, parseFloat(window.getComputedStyle(header).minWidth) || 72);
+
+                    header.classList.add('is-resizing');
+                    document.body.classList.add('is-resizing-columns');
+
+                    function applyWidth(width) {
+                        var nextWidth = Math.max(minWidth, width);
+                        header.style.width = nextWidth + 'px';
+                        header.style.minWidth = nextWidth + 'px';
+
+                        bodyRows.forEach(function (row) {
+                            var cell = row.children[columnIndex];
+                            if (cell) {
+                                cell.style.width = nextWidth + 'px';
+                                cell.style.minWidth = nextWidth + 'px';
+                            }
+                        });
+
+                        table.style.minWidth = Math.max(table.offsetWidth, table.getBoundingClientRect().width) + 'px';
+                    }
+
+                    function onPointerMove(moveEvent) {
+                        applyWidth(startWidth + (moveEvent.clientX - startX));
+                    }
+
+                    function onPointerUp() {
+                        document.removeEventListener('pointermove', onPointerMove);
+                        document.removeEventListener('pointerup', onPointerUp);
+                        header.classList.remove('is-resizing');
+                        document.body.classList.remove('is-resizing-columns');
+                    }
+
+                    document.addEventListener('pointermove', onPointerMove);
+                    document.addEventListener('pointerup', onPointerUp, { once: true });
+                });
+            });
+        });
+    }
+
+    // ── Funcoes expostas para Blazor JS Interop ────────────────────────────
 
     window.copyToClipboard = async function (text) {
         try {
@@ -115,8 +158,49 @@
         return localStorage.getItem('savio-theme') || '';
     };
 
+    window.getSidebarCollapsedState = function () {
+        return localStorage.getItem('savio-sidebar-collapsed') === 'true';
+    };
+
+    window.setSidebarCollapsedState = function (collapsed) {
+        var sidebar = document.querySelector('.sidebar');
+        var page = document.querySelector('.page');
+
+        if (sidebar) {
+            sidebar.classList.toggle('collapse', false);
+        }
+
+        if (page) {
+            page.classList.toggle('sidebar-collapsed', !!collapsed);
+        }
+
+        if (sidebar) {
+            sidebar.classList.toggle('is-collapsed', !!collapsed);
+        }
+
+        localStorage.setItem('savio-sidebar-collapsed', collapsed ? 'true' : 'false');
+    };
+
+    window.toggleSidebarMenu = function (collapsed) {
+        window.setSidebarCollapsedState(collapsed);
+    };
+
+    window.initializeResizableTables = initializeResizableTables;
+
     window.getBrowserTimezoneOffsetMinutes = function () {
         return new Date().getTimezoneOffset();
+    };
+
+    window.hardNavigate = function (url) {
+        window.location.href = url;
+    };
+
+    window.formNavigate = function (url) {
+        var form = document.createElement('form');
+        form.method = 'get';
+        form.action = url;
+        document.body.appendChild(form);
+        form.submit();
     };
 
     // ── Utilitario interno ─────────────────────────────────────────────────

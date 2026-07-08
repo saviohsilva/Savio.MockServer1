@@ -12,6 +12,7 @@ public interface IRequestHistoryRepository
     Task DeleteOldEntriesAsync(int keepLastDays = 30);
 
     Task<List<RequestHistoryEntity>> SearchAsync(RequestHistoryFilter filter, int skip = 0, int take = 100);
+    Task<List<RequestHistoryListItem>> SearchListAsync(RequestHistoryFilter filter, int skip = 0, int take = 100);
     Task<int> GetFilteredCountAsync(RequestHistoryFilter filter);
     Task<RequestHistoryEntity?> GetByIdAsync(int id);
     Task<bool> DeleteByIdAsync(int id);

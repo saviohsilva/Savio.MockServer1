@@ -15,7 +15,7 @@
         <div class="col">
             <h1 class="display-4">
                 <img src="img/logo.svg" alt="Mock Server" width="48" height="48" class="me-2 align-middle" />
-                Mock Server
+                Sávio Mock Server
             </h1>
             <p class="lead">Gerencie seus endpoints mockados de forma visual e interativa</p>
         </div>
@@ -25,6 +25,21 @@
             </button>
         </div>
     </div>
+
+    @if (isCurrentUserAdmin)
+    {
+        <div class="row mb-3">
+            <div class="col-lg-5 col-md-7">
+                <label class="form-label small text-muted">Visualizar dados do usuário</label>
+                <select class="form-select form-select-sm" @bind="selectedUserId" @bind:after="OnScopeUserChanged">
+                    @foreach (var option in userOptions)
+                    {
+                        <option value="@option.Id">@option.Label</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
 
     <div class="row mb-4">
         <div class="col-md-3">
@@ -90,7 +105,7 @@
                     else
                     {
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-hover table-resizable">
                                 <thead>
                                     <tr>
                                         <th>Status</th>

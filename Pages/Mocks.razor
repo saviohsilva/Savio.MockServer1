@@ -18,11 +18,33 @@
         </div>
     </div>
 
+    @if (isCurrentUserAdmin)
+    {
+        <div class="row mb-3">
+            <div class="col-lg-5 col-md-7">
+                <label class="form-label small text-muted">Visualizar dados do usuário</label>
+                <select class="form-select form-select-sm" @bind="selectedUserId" @bind:after="OnScopeUserChanged">
+                    @foreach (var option in userOptions)
+                    {
+                        <option value="@option.Id">@option.Label</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
+
+    @if (IsScopedToAnotherUser)
+    {
+        <div class="alert alert-info py-2">
+            <i class="bi bi-shield-lock"></i> Modo de visualização ativa para outro usuário. Ações de alteração ficam desabilitadas.
+        </div>
+    }
+
     <!-- Filtros -->
     <div class="card mb-4">
         <div class="card-body">
-            <div class="row g-2 align-items-end flex-nowrap">
-                <div class="col-md-1" style="min-width:110px">
+            <div class="row g-2 align-items-end filter-toolbar">
+                <div class="col-12 col-sm-6 col-md-1" style="min-width:110px">
                     <label class="form-label small text-muted">Método</label>
                     <select class="form-select form-select-sm" @bind="filter.Method" @bind:after="OnFilterChanged">
                         <option value="">Todos</option>
@@ -34,12 +56,12 @@
                     </select>
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-12 col-sm-6 col-md-3">
                     <label class="form-label small text-muted">Rota contém</label>
                     <input class="form-control form-control-sm" placeholder="Ex: /api/token" @bind="filter.RouteContains" @bind:after="OnFilterChanged" />
                 </div>
 
-                <div class="col-md-1" style="min-width:90px">
+                <div class="col-12 col-sm-6 col-md-1" style="min-width:90px">
                     <label class="form-label small text-muted">Status</label>
                     <select class="form-select form-select-sm" @bind="filterActiveString" @bind:after="OnFilterChanged">
                         <option value="">Todos</option>
@@ -48,12 +70,12 @@
                     </select>
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-12 col-sm-6 col-md-3">
                     <label class="form-label small text-muted">Descrição contém</label>
                     <input class="form-control form-control-sm" placeholder="Ex: token" @bind="filter.DescriptionContains" @bind:after="OnFilterChanged" />
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-12 col-sm-6 col-md-2">
                     <label class="form-label small text-muted">Grupo</label>
                     <select class="form-select form-select-sm" @bind="filterGroupString" @bind:after="OnFilterChanged">
                         <option value="">Todos</option>
@@ -65,9 +87,9 @@
                     </select>
                 </div>
 
-                <div class="col-md-1 align-self-end">
-                    <button class="btn btn-sm btn-outline-secondary w-100" @onclick="ClearFilters">
-                        <i class="bi bi-x-circle"></i> Limpar
+                <div class="col-12 col-sm-6 col-md-1 align-self-end filter-clear-col">
+                    <button class="btn btn-sm btn-outline-secondary w-100 filter-clear-btn" @onclick="ClearFilters">
+                        <i class="bi bi-x-circle"></i> <span class="filter-clear-label">Limpar</span>
                     </button>
                 </div>
             </div>
@@ -114,17 +136,17 @@
             <div class="p-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
-                        <button class="btn btn-outline-success btn-sm me-1" @onclick="ActivateSelectedMocksAsync" disabled="@(!selectedMocks.Any())">
+                        <button class="btn btn-outline-success btn-sm me-1" @onclick="ActivateSelectedMocksAsync" disabled="@(!selectedMocks.Any() || IsScopedToAnotherUser)">
                             <i class="bi bi-toggle-on"></i> Ativar Selecionados
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm me-1" @onclick="DeactivateSelectedMocksAsync" disabled="@(!selectedMocks.Any())">
+                        <button class="btn btn-outline-secondary btn-sm me-1" @onclick="DeactivateSelectedMocksAsync" disabled="@(!selectedMocks.Any() || IsScopedToAnotherUser)">
                             <i class="bi bi-toggle-off"></i> Desativar Selecionados
                         </button>
-                        <button class="btn btn-outline-danger btn-sm" @onclick="DeleteSelectedMocks" disabled="@(!selectedMocks.Any())">
+                        <button class="btn btn-outline-danger btn-sm" @onclick="DeleteSelectedMocks" disabled="@(!selectedMocks.Any() || IsScopedToAnotherUser)">
                             <i class="bi bi-trash"></i> Excluir Selecionados
                         </button>
                     </div>
-                    <button class="btn btn-primary btn-sm" @onclick="NavigateToCreateMock">
+                    <button class="btn btn-primary btn-sm" @onclick="NavigateToCreateMock" disabled="@IsScopedToAnotherUser">
                         <i class="bi bi-plus-circle"></i> Novo Mock
                     </button>
                 </div>
@@ -138,7 +160,7 @@
                 else
                 {
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover table-resizable mb-0">
                             <thead>
                                 <tr>
                                     <th class="col-th-40">
@@ -196,13 +218,13 @@
                                         <td><span class="badge bg-info">@mock.CallCount</span></td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-outline-primary" title="Editar" @onclick="() => NavigateToEdit(mock.Id)">
+                                                <button class="btn btn-sm btn-outline-primary" title="Editar" @onclick="() => NavigateToEdit(mock.Id)" disabled="@IsScopedToAnotherUser">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-secondary" title="Duplicar" @onclick="() => DuplicateMock(mock.Id)">
+                                                <button class="btn btn-sm btn-outline-secondary" title="Duplicar" @onclick="() => DuplicateMock(mock.Id)" disabled="@IsScopedToAnotherUser">
                                                     <i class="bi bi-copy"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-danger" title="Excluir" @onclick="() => DeleteMock(mock.Id)">
+                                                <button class="btn btn-sm btn-outline-danger" title="Excluir" @onclick="() => DeleteMock(mock.Id)" disabled="@IsScopedToAnotherUser">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                                 <button class="btn btn-sm btn-outline-info" title="Ver histórico" @onclick="() => ViewHistory(mock.Id)">
@@ -223,7 +245,7 @@
         <div class="tab-pane fade @(activeTab == "groups" ? "show active" : "")" role="tabpanel">
             <div class="p-3">
                 <div class="d-flex justify-content-end mb-3">
-                    <button class="btn btn-primary btn-sm" @onclick="NavigateToCreateGroup">
+                    <button class="btn btn-primary btn-sm" @onclick="NavigateToCreateGroup" disabled="@IsScopedToAnotherUser">
                         <i class="bi bi-folder-plus"></i> Novo Grupo
                     </button>
                 </div>
@@ -259,27 +281,27 @@
                                         </button>
                                         <div class="d-flex gap-1 me-3">
                                             <button class="btn btn-sm btn-outline-success" title="Ativar todos os mocks"
-                                                    @onclick="() => ActivateGroup(group.Id)" @onclick:stopPropagation="true">
+                                                    @onclick="() => ActivateGroup(group.Id)" @onclick:stopPropagation="true" disabled="@IsScopedToAnotherUser">
                                                 <i class="bi bi-toggle-on"></i>
                                             </button>
                                             <button class="btn btn-sm btn-outline-secondary" title="Desativar todos os mocks"
-                                                    @onclick="() => DeactivateGroup(group.Id)" @onclick:stopPropagation="true">
+                                                    @onclick="() => DeactivateGroup(group.Id)" @onclick:stopPropagation="true" disabled="@IsScopedToAnotherUser">
                                                 <i class="bi bi-toggle-off"></i>
                                             </button>
                                             <button class="btn btn-sm btn-outline-primary" title="Editar grupo"
-                                                    @onclick="() => NavigateToEditGroup(group.Id)" @onclick:stopPropagation="true">
+                                                    @onclick="() => NavigateToEditGroup(group.Id)" @onclick:stopPropagation="true" disabled="@IsScopedToAnotherUser">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             <button class="btn btn-sm btn-outline-secondary" title="Duplicar grupo"
-                                                    @onclick="() => DuplicateGroup(group.Id)" @onclick:stopPropagation="true">
+                                                    @onclick="() => DuplicateGroup(group.Id)" @onclick:stopPropagation="true" disabled="@IsScopedToAnotherUser">
                                                 <i class="bi bi-copy"></i>
                                             </button>
                                             <button class="btn btn-sm btn-outline-info" title="Novo mock neste grupo"
-                                                    @onclick="() => NavigateToCreateMockInGroup(group.Id)" @onclick:stopPropagation="true">
+                                                    @onclick="() => NavigateToCreateMockInGroup(group.Id)" @onclick:stopPropagation="true" disabled="@IsScopedToAnotherUser">
                                                 <i class="bi bi-plus-circle"></i>
                                             </button>
                                             <button class="btn btn-sm btn-outline-danger" title="Excluir grupo"
-                                                    @onclick="() => DeleteGroup(group.Id, group.Name)" @onclick:stopPropagation="true">
+                                                    @onclick="() => DeleteGroup(group.Id, group.Name)" @onclick:stopPropagation="true" disabled="@IsScopedToAnotherUser">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -298,7 +320,7 @@
                                             else
                                             {
                                                 <div class="table-responsive">
-                                                    <table class="table table-hover mb-0">
+                                                    <table class="table table-hover table-resizable mb-0">
                                                         <thead>
                                                             <tr>
                                                                 <th>Status</th>
@@ -322,19 +344,19 @@
                                                                     <td><span class="badge bg-info">@mock.CallCount</span></td>
                                                                     <td>
                                                                         <div class="btn-group" role="group">
-                                                                            <button class="btn btn-sm btn-outline-primary" title="Editar" @onclick="() => NavigateToEdit(mock.Id)">
+                                                                            <button class="btn btn-sm btn-outline-primary" title="Editar" @onclick="() => NavigateToEdit(mock.Id)" disabled="@IsScopedToAnotherUser">
                                                                                 <i class="bi bi-pencil"></i>
                                                                             </button>
-                                                                            <button class="btn btn-sm btn-outline-secondary" title="Duplicar" @onclick="() => DuplicateMock(mock.Id)">
+                                                                            <button class="btn btn-sm btn-outline-secondary" title="Duplicar" @onclick="() => DuplicateMock(mock.Id)" disabled="@IsScopedToAnotherUser">
                                                                                 <i class="bi bi-copy"></i>
                                                                             </button>
-                                                                            <button class="btn btn-sm btn-outline-danger" title="Excluir" @onclick="() => DeleteMock(mock.Id)">
+                                                                            <button class="btn btn-sm btn-outline-danger" title="Excluir" @onclick="() => DeleteMock(mock.Id)" disabled="@IsScopedToAnotherUser">
                                                                                 <i class="bi bi-trash"></i>
                                                                             </button>
                                                                             <button class="btn btn-sm btn-outline-info" title="Ver histórico" @onclick="() => ViewHistory(mock.Id)">
                                                                                 <i class="bi bi-clock-history"></i>
                                                                             </button>
-                                                                            <button class="btn btn-sm btn-outline-warning" title="Remover do grupo" @onclick="() => RemoveFromGroup(mock.Id)">
+                                                                            <button class="btn btn-sm btn-outline-warning" title="Remover do grupo" @onclick="() => RemoveFromGroup(mock.Id)" disabled="@IsScopedToAnotherUser">
                                                                                 <i class="bi bi-box-arrow-right"></i>
                                                                             </button>
                                                                         </div>

@@ -1,0 +1,306 @@
+@page "/auth-configs/novo"
+@page "/auth-configs/editar/{Id:int}"
+@using Savio.MockServer.Services
+@using Savio.MockServer.Data.Entities
+@using Microsoft.AspNetCore.Identity
+@inject MockAuthConfigService AuthConfigService
+@inject CertificateService CertificateService
+@inject NavigationManager Navigation
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>@(IsEdit ? "Editar Auth Config" : "Nova Auth Config")</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>
+                <i class="bi @(IsEdit ? "bi-pencil-square" : "bi-key") me-2"></i>
+                @(IsEdit ? "Editar Configuração de Auth" : "Nova Configuração de Auth")
+            </h1>
+        </div>
+        <div class="col-auto d-flex align-items-center">
+            <a href="/auth-configs" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-7">
+            <!-- Básico -->
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0">Configurações Básicas</h5></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" class="form-control" @bind="model.Name" placeholder="Ex: Auth JWT Básico" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <input type="text" class="form-control" @bind="model.Description" placeholder="Descrição opcional" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Autenticação *</label>
+                        <select class="form-select" @bind="model.Type" @bind:after="OnTypeChanged">
+                            <option value="@MockAuthType.Basic">Basic (usuário + senha)</option>
+                            <option value="@MockAuthType.Bearer">Bearer (JWT)</option>
+                            <option value="@MockAuthType.CustomToken">Token Customizado</option>
+                            <option value="@MockAuthType.ApiKey">API Key</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Credenciais -->
+            @if (model.Type == MockAuthType.Basic || model.Type == MockAuthType.Bearer)
+            {
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0">Credenciais</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Usuário</label>
+                                <input type="text" class="form-control" @bind="model.Username" placeholder="admin" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Senha</label>
+                                <input type="password" class="form-control" @bind="model.Password" placeholder="senha123" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Parâmetros dinâmicos (Token Customizado) -->
+            @if (model.Type == MockAuthType.CustomToken)
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Parâmetros de Validação</h5>
+                        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddCustomValidationParam">
+                            <i class="bi bi-plus"></i> Adicionar parâmetro
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        @if (!model.CustomValidationParams.Any())
+                        {
+                            <p class="text-muted mb-0">Nenhum parâmetro configurado.</p>
+                        }
+                        else
+                        {
+                            @foreach (var param in model.CustomValidationParams)
+                            {
+                                <div class="row g-2 align-items-center mb-2">
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control" @bind="param.Name" placeholder="Nome (ex: usuario)" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select class="form-select" @bind="param.Location">
+                                            <option value="@AuthParamLocation.Body">Body</option>
+                                            <option value="@AuthParamLocation.QueryString">QueryString</option>
+                                            <option value="@AuthParamLocation.Header">Header</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control" @bind="param.Value" placeholder="Valor esperado" />
+                                    </div>
+                                    <div class="col-md-1 d-grid">
+                                        <button type="button" class="btn btn-outline-danger" @onclick="() => RemoveCustomValidationParam(param)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        }
+
+                        <hr />
+                        <h6 class="mb-3">Retorno do Token</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Local de retorno</label>
+                                <select class="form-select" @bind="model.CustomTokenReturnLocation">
+                                    <option value="@TokenReturnLocation.Body">Body</option>
+                                    <option value="@TokenReturnLocation.Header">Header</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Nome do token</label>
+                                <input type="text" class="form-control" @bind="model.CustomTokenReturnName" placeholder="token" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Prefixo</label>
+                                <input type="text" class="form-control" @bind="model.CustomTokenPrefix" placeholder="pre_" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Sufixo</label>
+                                <input type="text" class="form-control" @bind="model.CustomTokenSuffix" placeholder="_suf" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- JWT -->
+            @if (model.Type == MockAuthType.Bearer || model.Type == MockAuthType.CustomToken)
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <h5 class="mb-0">Configurações JWT</h5>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" @bind="model.GenerateJwtToken" id="jwtSwitch" />
+                                <label class="form-check-label small" for="jwtSwitch">Gerar token real</label>
+                            </div>
+                        </div>
+                    </div>
+                    @if (model.GenerateJwtToken)
+                    {
+                        <div class="card-body">
+                            <div class="alert alert-info py-2 small mb-3">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Quando habilitado, o endpoint <em>emissor de token</em> retornará um JWT real assinado com as configurações abaixo.
+                                Outros endpoints <em>protegidos</em> com esta config validarão o token automaticamente.
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Secret Key</label>
+                                <input type="text" class="form-control font-monospace" @bind="model.JwtSecretKey"
+                                       placeholder="Deixe vazio para usar secret auto-gerada" />
+                                <small class="form-text text-muted">Mínimo 32 caracteres recomendado.</small>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Expiração (min)</label>
+                                    <input type="number" class="form-control" @bind="model.JwtExpirationMinutes" min="1" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Issuer</label>
+                                    <input type="text" class="form-control" @bind="model.JwtIssuer" placeholder="Savio.MockServer" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Audience</label>
+                                    <input type="text" class="form-control" @bind="model.JwtAudience" placeholder="Opcional" />
+                                </div>
+                            </div>
+                            <div class="mb-3 mt-3">
+                                <label class="form-label">Claims adicionais (JSON)</label>
+                                <textarea class="form-control font-monospace"
+                                          rows="3" @bind="model.JwtAdditionalClaimsJson"
+                                          placeholder='{"role":"admin","tenant":"empresa"}'>
+                                </textarea>
+                                <small class="form-text text-muted">Claims extras a incluir no payload do token.</small>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <!-- API Key -->
+            @if (model.Type == MockAuthType.ApiKey)
+            {
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0">API Key</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label">Header *</label>
+                                <input type="text" class="form-control" @bind="model.ApiKeyHeader" placeholder="X-API-Key" />
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label">Valor *</label>
+                                <input type="text" class="form-control font-monospace" @bind="model.ApiKeyValue"
+                                       placeholder="minha-chave-secreta" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Certificado cliente -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h5 class="mb-0">Certificado de Cliente (mTLS)</h5>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" @bind="model.RequireCertificate" id="certSwitch" />
+                            <label class="form-check-label small" for="certSwitch">Exigir certificado</label>
+                        </div>
+                    </div>
+                </div>
+                @if (model.RequireCertificate)
+                {
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Certificado esperado</label>
+                            <select class="form-select" @bind="model.RequiredCertificateId">
+                                <option value="">Qualquer certificado válido</option>
+                                @foreach (var cert in certificates)
+                                {
+                                    <option value="@cert.Id">@cert.Name — @cert.Thumbprint[..16]…</option>
+                                }
+                            </select>
+                            <small class="form-text text-muted">
+                                Se selecionado, somente o thumbprint deste certificado será aceito.
+                                <a href="/certificados/novo" target="_blank">Gerar novo certificado</a>
+                            </small>
+                        </div>
+                        <div class="alert alert-warning py-2 small">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Para validar certificados de cliente, o Kestrel precisa estar configurado com
+                            <code>ClientCertificateMode.AllowCertificate</code> no appsettings.json.
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(saveError))
+            {
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-1"></i> @saveError
+                </div>
+            }
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="/auth-configs" class="btn btn-secondary">Cancelar</a>
+                <button class="btn btn-primary" @onclick="Save" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-floppy me-1"></i>
+                    }
+                    @(IsEdit ? "Salvar Alterações" : "Criar Configuração")
+                </button>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header"><h6 class="mb-0"><i class="bi bi-question-circle me-1"></i>Como funciona?</h6></div>
+                <div class="card-body small">
+                    <p>Vincule esta configuração a um endpoint mock no <strong>Editor de Mock</strong>.</p>
+                    <p>Ao vincular, você define o <strong>papel do endpoint</strong>:</p>
+                    <ul class="ps-3">
+                        <li>
+                            <strong>Emissor de Token</strong> — o endpoint valida as credenciais da requisição
+                            e retorna um JWT real (ex: POST /api/token).
+                        </li>
+                        <li>
+                            <strong>Protegido</strong> — o endpoint exige autenticação válida antes de servir
+                            a resposta configurada.
+                        </li>
+                    </ul>
+                    <hr />
+                    <p class="mb-0 text-muted">
+                        Com o tipo <strong>Bearer + Gerar token real</strong>, você pode:
+                    </p>
+                    <ol class="ps-3 mt-1 mb-0">
+                        <li>Autenticar em POST /api/token e obter um JWT real</li>
+                        <li>Usar o JWT para acessar endpoints protegidos</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

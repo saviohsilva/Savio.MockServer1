@@ -1,9 +1,6 @@
 @page "/account/mfa-verify"
 @layout Savio.MockServer.Shared.AuthLayout
 @using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.Identity.UI.Services
-@using Savio.MockServer.Data.Entities
 @attribute [AllowAnonymous]
 <PageTitle>Verificação em Duas Etapas - Savio Mock Server</PageTitle>
 
@@ -29,6 +26,13 @@
             </div>
         }
 
+        @if (!string.IsNullOrEmpty(infoMessage))
+        {
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle"></i> @infoMessage
+            </div>
+        }
+
         <form method="post" action="/account/do-mfa-verify">
             <input type="hidden" name="mfaMethod" value="@mfaMethod" />
 
@@ -41,7 +45,8 @@
             @if (mfaMethod == "Email")
             {
                 <div class="mb-3 text-center">
-                    <button type="button" class="btn btn-link btn-sm" @onclick="ResendEmailCode">
+                    <button type="button" class="btn btn-link btn-sm"
+                            onclick="document.getElementById('resend-form').submit()">
                         <i class="bi bi-arrow-repeat"></i> Reenviar código por e-mail
                     </button>
                 </div>
@@ -56,6 +61,11 @@
                 <i class="bi bi-shield-check"></i> Verificar
             </button>
         </form>
+
+        @if (mfaMethod == "Email")
+        {
+            <form id="resend-form" method="post" action="/account/do-mfa-resend-email" style="display:none;"></form>
+        }
 
         <hr />
 

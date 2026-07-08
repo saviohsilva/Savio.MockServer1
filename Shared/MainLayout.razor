@@ -1,62 +1,70 @@
 ﻿@inherits LayoutComponentBase
-@using Blazored.Modal
-@using Blazored.Modal.Services
 
-<div class="page">
-    <div class="sidebar">
+<div class="page @(isSidebarCollapsed ? "sidebar-collapsed" : string.Empty)">
+    <div class="sidebar @(isSidebarCollapsed ? "is-collapsed" : string.Empty)">
         <div class="top-row ps-3 navbar navbar-dark">
             <div class="container-fluid">
-                <a class="navbar-brand d-flex align-items-center" href="">
-                    <img src="img/logo.svg" alt="Mock Server" width="28" height="28" class="me-2 sidebar-logo" />
-                    Mock Server
-                </a>
-                <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-                    <span class="navbar-toggler-icon"></span>
+                <button type="button" class="btn btn-outline-secondary btn-sm sidebar-toggle-btn sidebar-toggle-btn-inline" @onclick="ToggleNavMenu" aria-label="Alternar menu lateral" title="Alternar menu lateral">
+                    <i class="bi bi-list"></i>
                 </button>
+                <a class="navbar-brand d-flex align-items-center sidebar-brand" href="">
+                    <img src="img/logo.svg" alt="Mock Server" width="28" height="28" class="sidebar-logo" />
+                    <span class="sidebar-brand-text ms-2">Mock Server</span>
+                </a>
             </div>
         </div>
 
         <nav class="flex-column">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                    <span class="bi bi-house-door-fill" aria-hidden="true"></span> Dashboard
+                    <span class="bi bi-house-door-fill" aria-hidden="true"></span><span class="sidebar-link-text">Dashboard</span>
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="mock/create">
-                    <span class="bi bi-plus-circle-fill" aria-hidden="true"></span> Novo Mock
+                    <span class="bi bi-plus-circle-fill" aria-hidden="true"></span><span class="sidebar-link-text">Novo Mock</span>
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="mocks">
-                    <span class="bi bi-collection" aria-hidden="true"></span> Gerenciar Mocks
+                    <span class="bi bi-collection" aria-hidden="true"></span><span class="sidebar-link-text">Gerenciar Mocks</span>
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="historico">
-                    <span class="bi bi-clock-history" aria-hidden="true"></span> Histórico
+                    <span class="bi bi-clock-history" aria-hidden="true"></span><span class="sidebar-link-text">Histórico</span>
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="unmocked">
-                    <span class="bi bi-exclamation-triangle" aria-hidden="true"></span> Não Mockadas
+                    <span class="bi bi-exclamation-triangle" aria-hidden="true"></span><span class="sidebar-link-text">Não Mockadas</span>
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="certificados">
+                    <span class="bi bi-file-earmark-lock2" aria-hidden="true"></span><span class="sidebar-link-text">Certificados</span>
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="about">
-                    <span class="bi bi-info-circle" aria-hidden="true"></span> Sobre
+                    <span class="bi bi-info-circle" aria-hidden="true"></span><span class="sidebar-link-text">Sobre</span>
                 </NavLink>
             </div>
         </nav>
     </div>
 
     <main>
-        <div class="top-row px-4 bg-light border-bottom d-flex justify-content-between">
-            <span class="text-muted small">
-                <i class="bi bi-server"></i> @serverUrl
-            </span>
-            <div class="d-flex align-items-center gap-3">
-                <div class="d-flex align-items-center gap-2">
+        <div class="top-row px-4 bg-light border-bottom d-flex justify-content-between app-topbar">
+            <div class="d-flex align-items-center gap-2 app-topbar-left">
+                <button type="button" class="btn btn-outline-secondary btn-sm sidebar-toggle-btn sidebar-toggle-btn-mobile" @onclick="ToggleNavMenu" aria-label="Alternar menu lateral" title="Alternar menu lateral">
+                    <i class="bi bi-list"></i>
+                </button>
+                <span class="text-muted small app-server-url">
+                    <i class="bi bi-server"></i> @serverUrl
+                </span>
+            </div>
+            <div class="d-flex align-items-center gap-3 app-topbar-right">
+                <div class="d-flex align-items-center gap-2 app-theme-picker">
                     <label class="form-label small text-muted mb-0"><i class="bi bi-palette"></i></label>
                     <select class="form-select form-select-sm w-auto" @bind="currentTheme" @bind:after="OnThemeChanged">
                         <option value="">Laranja (padrão)</option>
@@ -66,7 +74,7 @@
                 </div>
                 <AuthorizeView>
                     <Authorized>
-                        <span class="text-muted small">
+                        <span class="text-muted small app-user-name">
                             <i class="bi bi-person-circle"></i> @context.User.Identity?.Name
                         </span>
                         <a href="/account/settings" class="btn btn-sm btn-outline-secondary" title="Configurações">
@@ -86,9 +94,7 @@
         </div>
 
         <article class="content px-4">
-            <CascadingBlazoredModal>
-                @Body
-            </CascadingBlazoredModal>
+            @Body
         </article>
 
         <footer class="footer-copyright">

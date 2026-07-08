@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 namespace Savio.MockServer.Data.Entities;
@@ -24,15 +24,15 @@ public class MockEndpointEntity
     
     public string? ResponseBodyRaw { get; set; }
     
-    // Response bin�rio (persistido como blob)
+    // Response binário (persistido como blob)
     public int? ResponseBinaryBlobId { get; set; }
 
-    // Response bin�rio (legado base64)
+    // Response binário (legado base64)
     public string? ResponseBodyBase64 { get; set; }
     public string? ResponseBodyContentType { get; set; }
     public string? ResponseBodyFileName { get; set; }
     
-    // Response multipart/mixed em JSON (configura��o)
+    // Response multipart/mixed em JSON (configuração)
     public string? ResponseMultipartJson { get; set; }
     
     public int DelayMs { get; set; }
@@ -54,21 +54,35 @@ public class MockEndpointEntity
     public int? MockGroupId { get; set; }
     public MockGroupEntity? MockGroup { get; set; }
 
-    // Propriet�rio
+    // Configuração de autenticação vinculada (opcional)
+    public int? AuthConfigId { get; set; }
+    public MockAuthConfigEntity? AuthConfig { get; set; }
+
+    /// <summary>
+    /// Define como este endpoint participa do fluxo de autenticação quando AuthConfigId está definido.
+    /// </summary>
+    public MockAuthEndpointRole? AuthEndpointRole { get; set; }
+
+    // Certificado de cliente móvel (nível do endpoint, independente da autenticação)
+    public bool RequireClientCertificate { get; set; }
+    public int? RequiredClientCertificateId { get; set; }
+    public MockCertificateEntity? RequiredClientCertificate { get; set; }
+
+    // Proprietário
     public string? UserId { get; set; }
     public ApplicationUser? User { get; set; }
 
-    // Navega��o
-    public ICollection<RequestHistoryEntity> RequestHistory { get; set; } = new List<RequestHistoryEntity>();
+    // Navegação
+    public ICollection<RequestHistoryEntity> RequestHistory { get; set; } = [];
     
     // Helpers
     public Dictionary<string, string> GetHeaders()
     {
         if (string.IsNullOrEmpty(HeadersJson))
-            return new Dictionary<string, string>();
+            return [];
             
         return JsonSerializer.Deserialize<Dictionary<string, string>>(HeadersJson) 
-            ?? new Dictionary<string, string>();
+            ?? [];
     }
     
     public void SetHeaders(Dictionary<string, string> headers)

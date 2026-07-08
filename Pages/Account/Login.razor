@@ -13,6 +13,13 @@
             <p class="text-muted small">Faça login para continuar</p>
         </div>
 
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle"></i> @successMessage
+            </div>
+        }
+
         @if (!string.IsNullOrEmpty(errorMessage))
         {
             <div class="alert alert-danger">
@@ -20,15 +27,37 @@
             </div>
         }
 
+        @if (showResendConfirmation)
+        {
+            <form method="post" action="/account/do-resend-confirmation" class="mb-3">
+                <label class="form-label">Reenviar confirmação para</label>
+                <input type="email"
+                       class="form-control mb-2"
+                       name="email"
+                       value="@resendEmail"
+                       placeholder="seu@email.com"
+                       required />
+                <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                    <i class="bi bi-arrow-repeat"></i> Reenviar e-mail de confirmação
+                </button>
+            </form>
+        }
+
         <form method="post" action="/account/do-login">
             <div class="mb-3">
                 <label class="form-label">E-mail</label>
-                <input type="email" class="form-control" name="email" placeholder="seu@email.com" required />
+                <input type="text" class="form-control" name="email" value="@resendEmail" placeholder="seu@email.com" required autocomplete="username" />
             </div>
 
-            <div class="mb-3">
+            <div class="mb-2">
                 <label class="form-label">Senha</label>
                 <input type="password" class="form-control" name="password" placeholder="Sua senha" required />
+            </div>
+
+            <div class="mb-3 text-end">
+                <a href="/account/forgot-password" class="small text-decoration-none">
+                    <i class="bi bi-key"></i> Esqueci minha senha
+                </a>
             </div>
 
             <div class="mb-3 form-check">

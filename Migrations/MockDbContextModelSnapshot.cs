@@ -225,6 +225,158 @@ namespace Savio.MockServer.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Savio.MockServer.Data.Entities.EmailSettingEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FromEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FromName")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SmtpHost")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SmtpPassEncrypted")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SmtpPort")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SmtpUser")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EmailSettings");
+                });
+
+            modelBuilder.Entity("Savio.MockServer.Data.Entities.MockAuthConfigEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApiKeyHeader")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApiKeyValue")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomTokenPrefix")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CustomTokenReturnLocation")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CustomTokenReturnName")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomTokenSuffix")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomValidationParamsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("GenerateJwtToken")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("JwtAdditionalClaimsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("JwtAudience")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("JwtExpirationMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("JwtIssuer")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("JwtSecretKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Password")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PasswordParamLocation")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PasswordParamName")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequireCertificate")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("RequiredCertificateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UsernameParamLocation")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UsernameParamName")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("RequiredCertificateId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("MockAuthConfigs");
+                });
+
             modelBuilder.Entity("Savio.MockServer.Data.Entities.MockBinaryBlobEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -253,10 +405,64 @@ namespace Savio.MockServer.Migrations
                     b.ToTable("MockBinaryBlobs");
                 });
 
+            modelBuilder.Entity("Savio.MockServer.Data.Entities.MockCertificateEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte[]>("CertificateData")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("HasPassword")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Thumbprint")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Thumbprint");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("MockCertificates");
+                });
+
             modelBuilder.Entity("Savio.MockServer.Data.Entities.MockEndpointEntity", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("AuthConfigId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("AuthEndpointRole")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("CallCount")
@@ -287,6 +493,12 @@ namespace Savio.MockServer.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("MockGroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequireClientCertificate")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("RequiredClientCertificateId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int?>("ResponseBinaryBlobId")
@@ -326,11 +538,15 @@ namespace Savio.MockServer.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AuthConfigId");
+
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("IsActive");
 
                     b.HasIndex("MockGroupId");
+
+                    b.HasIndex("RequiredClientCertificateId");
 
                     b.HasIndex("UserId");
 
@@ -457,6 +673,8 @@ namespace Savio.MockServer.Migrations
 
                     b.HasIndex("RequestedAt");
 
+                    b.HasIndex("MockEndpointId", "RequestedAt");
+
                     b.ToTable("RequestHistory");
                 });
 
@@ -513,11 +731,17 @@ namespace Savio.MockServer.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("LastSeenAt");
 
                     b.HasIndex("MockCreated");
+
+                    b.HasIndex("UserId");
 
                     b.HasIndex("Route", "Method");
 
@@ -575,11 +799,11 @@ namespace Savio.MockServer.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Savio.MockServer.Data.Entities.MockEndpointEntity", b =>
+            modelBuilder.Entity("Savio.MockServer.Data.Entities.MockAuthConfigEntity", b =>
                 {
-                    b.HasOne("Savio.MockServer.Data.Entities.MockGroupEntity", "MockGroup")
-                        .WithMany("MockEndpoints")
-                        .HasForeignKey("MockGroupId")
+                    b.HasOne("Savio.MockServer.Data.Entities.MockCertificateEntity", "RequiredCertificate")
+                        .WithMany("AuthConfigs")
+                        .HasForeignKey("RequiredCertificateId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Savio.MockServer.Data.Entities.ApplicationUser", "User")
@@ -587,7 +811,48 @@ namespace Savio.MockServer.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.Navigation("RequiredCertificate");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Savio.MockServer.Data.Entities.MockCertificateEntity", b =>
+                {
+                    b.HasOne("Savio.MockServer.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Savio.MockServer.Data.Entities.MockEndpointEntity", b =>
+                {
+                    b.HasOne("Savio.MockServer.Data.Entities.MockAuthConfigEntity", "AuthConfig")
+                        .WithMany("MockEndpoints")
+                        .HasForeignKey("AuthConfigId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Savio.MockServer.Data.Entities.MockGroupEntity", "MockGroup")
+                        .WithMany("MockEndpoints")
+                        .HasForeignKey("MockGroupId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Savio.MockServer.Data.Entities.MockCertificateEntity", "RequiredClientCertificate")
+                        .WithMany()
+                        .HasForeignKey("RequiredClientCertificateId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Savio.MockServer.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("AuthConfig");
+
                     b.Navigation("MockGroup");
+
+                    b.Navigation("RequiredClientCertificate");
 
                     b.Navigation("User");
                 });
@@ -611,6 +876,16 @@ namespace Savio.MockServer.Migrations
                         .IsRequired();
 
                     b.Navigation("MockEndpoint");
+                });
+
+            modelBuilder.Entity("Savio.MockServer.Data.Entities.MockAuthConfigEntity", b =>
+                {
+                    b.Navigation("MockEndpoints");
+                });
+
+            modelBuilder.Entity("Savio.MockServer.Data.Entities.MockCertificateEntity", b =>
+                {
+                    b.Navigation("AuthConfigs");
                 });
 
             modelBuilder.Entity("Savio.MockServer.Data.Entities.MockEndpointEntity", b =>

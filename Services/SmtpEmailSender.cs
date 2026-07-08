@@ -4,40 +4,29 @@ using System.Net.Mail;
 
 namespace Savio.MockServer.Services;
 
-public class SmtpEmailSender : IEmailSender
+public class SmtpEmailSender(EmailSettingService emailSettingService, ILogger<SmtpEmailSender> logger) : IEmailSender
 {
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<SmtpEmailSender> _logger;
-
-    public SmtpEmailSender(IConfiguration configuration, ILogger<SmtpEmailSender> logger)
-    {
-        _configuration = configuration;
-        _logger = logger;
-    }
-
     public async Task SendEmailAsync(string email, string subject, string htmlMessage)
     {
-        var smtpHost = _configuration["Email:SmtpHost"];
-        var smtpPort = int.TryParse(_configuration["Email:SmtpPort"], out var port) ? port : 587;
-        var smtpUser = _configuration["Email:SmtpUser"];
-        var smtpPass = _configuration["Email:SmtpPass"];
-        var fromEmail = _configuration["Email:FromEmail"] ?? smtpUser;
-        var fromName = _configuration["Email:FromName"] ?? "Savio Mock Server";
+        var settings = await emailSettingService.GetEffectiveSettingsAsync();
 
-        if (string.IsNullOrWhiteSpace(smtpHost))
+        if (settings == null)
         {
-            _logger.LogWarning(
-                "⚠️ SMTP não configurado (Email:SmtpHost vazio). " +
+            logger.LogWarning(
+                "⚠️ SMTP não configurado. " +
                 "E-mail para {Email} não será enviado. " +
-                "Configure a seção 'Email' no appsettings.json para habilitar envio real. " +
+                "Configure a seção 'Email' no appsettings.json ou na tela de Configurações para habilitar envio real. " +
                 "Assunto: {Subject}", email, subject);
-            _logger.LogInformation("📧 Conteúdo do e-mail (para depuração):\n{Message}", htmlMessage);
+            logger.LogInformation("📧 Conteúdo do e-mail (para depuração):\n{Message}", htmlMessage);
             return;
         }
 
-        using var client = new SmtpClient(smtpHost, smtpPort)
+        var fromEmail = settings.FromEmail ?? settings.SmtpUser;
+        var fromName = settings.FromName ?? "Savio Mock Server";
+
+        using var client = new SmtpClient(settings.SmtpHost, settings.SmtpPort)
         {
-            Credentials = new NetworkCredential(smtpUser, smtpPass),
+            Credentials = new NetworkCredential(settings.SmtpUser, settings.SmtpPass),
             EnableSsl = true
         };
 
@@ -53,12 +42,12 @@ public class SmtpEmailSender : IEmailSender
         try
         {
             await client.SendMailAsync(message);
-            _logger.LogInformation("✅ E-mail enviado com sucesso para {Email}", email);
+            logger.LogInformation("✅ E-mail enviado com sucesso para {Email}", email);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Erro ao enviar e-mail para {Email}", email);
-            throw;
+            logger.LogError(ex, "❌ Erro ao enviar e-mail para {Email}", email);
+            throw new InvalidOperationException($"Falha ao enviar e-mail para '{email}'.", ex);
         }
     }
 }

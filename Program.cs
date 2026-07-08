@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Savio.MockServer.Endpoints;
 using Savio.MockServer.Extensions;
 using Savio.MockServer.Middleware;
@@ -15,6 +16,29 @@ builder.WebHost.ConfigureKestrel(options =>
     options.Limits.MaxRequestBodySize = 100 * 1024 * 1024;
     options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
     options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(1);
+
+    // Permite certificados de cliente (mTLS) quando fornecidos.
+    // A exigência por certificado é aplicada apenas no nível do endpoint
+    // pelo middleware de mocks (evita popup no navegador ao abrir a aplicação).
+    options.ConfigureHttpsDefaults(https =>
+    {
+        https.ClientCertificateMode = ClientCertificateMode.AllowCertificate;
+        https.ClientCertificateValidation = (cert, chain, errors) =>
+        {
+            // Valida o certificado: aceita se não houver erros ou apenas se for auto-assinado
+            // Em produção, você pode implementar validação mais rigorosa
+            if (errors == System.Net.Security.SslPolicyErrors.None)
+                return true;
+            
+            if (errors == System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors)
+            {
+                // Aceita certificados auto-assinados durante desenvolvimento
+                return true;
+            }
+            
+            return false;
+        };
+    });
 });
 
 builder.Services.AddDatabase(builder.Configuration);

@@ -3,10 +3,12 @@ using Blazored.Modal.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
 using Savio.MockServer.Components;
 using Savio.MockServer.Data.Entities;
 using Savio.MockServer.Models;
+using Savio.MockServer.Security;
 using Savio.MockServer.Services;
 
 namespace Savio.MockServer.Pages;
@@ -24,6 +26,9 @@ public partial class Index : IDisposable
     private List<MockEndpoint> mocks = [];
     private string? currentUserId;
     private string? currentAlias;
+    private bool isCurrentUserAdmin;
+    private string? selectedUserId;
+    private List<UserScopeOption> userOptions = [];
 
     private DateTime? LastAccessUtc =>
         mocks.Any(m => m.LastCalledAt.HasValue)
@@ -44,7 +49,29 @@ public partial class Index : IDisposable
             var user = await UserManager.GetUserAsync(authState.User);
             currentUserId = user?.Id;
             currentAlias = user?.Alias;
+
+            if (user != null)
+            {
+                isCurrentUserAdmin = await UserManager.IsInRoleAsync(user, AppRoles.Admin);
+
+                if (isCurrentUserAdmin)
+                {
+                    userOptions = await UserManager.Users
+                        .OrderBy(u => u.UserName)
+                        .Select(u => new UserScopeOption
+                        {
+                            Id = u.Id,
+                            Label = string.IsNullOrWhiteSpace(u.Alias)
+                                ? (u.UserName ?? "(sem usuário)")
+                                : $"{u.UserName} (/{u.Alias})",
+                            Alias = u.Alias
+                        })
+                        .ToListAsync();
+                }
+            }
         }
+
+        selectedUserId = currentUserId;
         await LoadMocksAsync();
     }
 
@@ -58,7 +85,19 @@ public partial class Index : IDisposable
 
     private async Task LoadMocksAsync()
     {
-        mocks = await MockService.GetAllMocksAsync(currentUserId);
+        var scopeUserId = isCurrentUserAdmin ? selectedUserId : currentUserId;
+        mocks = await MockService.GetAllMocksAsync(scopeUserId);
+    }
+
+    private async Task OnScopeUserChanged()
+    {
+        if (!isCurrentUserAdmin)
+            return;
+
+        if (string.IsNullOrWhiteSpace(selectedUserId) || !userOptions.Any(u => u.Id == selectedUserId))
+            selectedUserId = currentUserId;
+
+        await LoadMocksAsync();
     }
 
     private void NavigateToCreate()
@@ -108,9 +147,20 @@ public partial class Index : IDisposable
 
     private async Task TestMock(MockEndpoint mock)
     {
-        var aliasPrefix = !string.IsNullOrEmpty(currentAlias) ? $"/{currentAlias}" : string.Empty;
+        var scopedAlias = currentAlias;
+        if (isCurrentUserAdmin && !string.IsNullOrWhiteSpace(selectedUserId))
+            scopedAlias = userOptions.FirstOrDefault(u => u.Id == selectedUserId)?.Alias;
+
+        var aliasPrefix = !string.IsNullOrEmpty(scopedAlias) ? $"/{scopedAlias}" : string.Empty;
         var baseUri = Navigation.BaseUri.TrimEnd('/');
         var url = $"{baseUri}{aliasPrefix}{mock.Route}";
         await JS.InvokeVoidAsync("window.open", url, "_blank");
+    }
+
+    private sealed class UserScopeOption
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+        public string Alias { get; set; } = string.Empty;
     }
 }

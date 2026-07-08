@@ -1,7 +1,7 @@
-<div class="text-center">
-    <i class="bi @Icon fs-1 text-@IconColor d-block mb-3"></i>
-    <p>@Message</p>
-    <div class="d-flex justify-content-center gap-2">
+<div class="text-center app-dialog-content">
+    <i class="bi @Icon fs-1 text-@IconColor d-block mb-3 app-dialog-icon"></i>
+    <p class="app-dialog-message">@Message</p>
+    <div class="d-flex justify-content-center gap-2 app-dialog-actions">
         <button class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
         <button class="btn btn-@IconColor" @onclick="Confirm">Confirmar</button>
     </div>

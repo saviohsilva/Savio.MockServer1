@@ -38,11 +38,11 @@
     --transition-fast: all 0.15s ease;
 
     /* Aliases legados (retrocompatibilidade) */
-    --evertec-orange: var(--color-primary);
-    --evertec-orange-dark: var(--color-primary-dark);
-    --evertec-orange-darker: var(--color-primary-darker);
-    --evertec-orange-light: var(--color-primary-light);
-    --evertec-orange-lighter: var(--color-primary-lighter);
+    --brand-orange: var(--color-primary);
+    --brand-orange-dark: var(--color-primary-dark);
+    --brand-orange-darker: var(--color-primary-darker);
+    --brand-orange-light: var(--color-primary-light);
+    --brand-orange-lighter: var(--color-primary-lighter);
 }
 
 /* ?? Paleta alternativa: Preto e Verde ?? */
@@ -59,11 +59,11 @@
     --bg-sidebar: #121212;
     --bg-sidebar-hover: #1e1e1e;
 
-    --evertec-orange: var(--color-primary);
-    --evertec-orange-dark: var(--color-primary-dark);
-    --evertec-orange-darker: var(--color-primary-darker);
-    --evertec-orange-light: var(--color-primary-light);
-    --evertec-orange-lighter: var(--color-primary-lighter);
+    --brand-orange: var(--color-primary);
+    --brand-orange-dark: var(--color-primary-dark);
+    --brand-orange-darker: var(--color-primary-darker);
+    --brand-orange-light: var(--color-primary-light);
+    --brand-orange-lighter: var(--color-primary-lighter);
 }
 
 /* ?? Paleta alternativa: Azul Corporativo ?? */
@@ -75,11 +75,11 @@
     --color-primary-lighter: #90CAF9;
     --color-primary-rgb: 25, 118, 210;
 
-    --evertec-orange: var(--color-primary);
-    --evertec-orange-dark: var(--color-primary-dark);
-    --evertec-orange-darker: var(--color-primary-darker);
-    --evertec-orange-light: var(--color-primary-light);
-    --evertec-orange-lighter: var(--color-primary-lighter);
+    --brand-orange: var(--color-primary);
+    --brand-orange-dark: var(--color-primary-dark);
+    --brand-orange-darker: var(--color-primary-darker);
+    --brand-orange-light: var(--color-primary-light);
+    --brand-orange-lighter: var(--color-primary-lighter);
 }
 
 /* ========================================
