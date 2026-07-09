@@ -254,11 +254,11 @@ public class MockService(IMockRepository repository, IMockGroupRepository groupR
         return entity != null ? GroupEntityToModel(entity) : null;
     }
 
-    public async Task<(bool success, string? error)> AddGroupAsync(string name, string? description, string? color = null, string? userId = null)
+    public async Task<(bool success, string? error, int id)> AddGroupAsync(string name, string? description, string? color = null, string? userId = null)
     {
         if (await _groupRepository.ExistsByNameAsync(name, null, userId))
         {
-            return (false, $"Já existe um agrupamento com o nome \"{name}\".");
+            return (false, $"Já existe um agrupamento com o nome \"{name}\".", 0);
         }
 
         var entity = new MockGroupEntity
@@ -270,7 +270,7 @@ public class MockService(IMockRepository repository, IMockGroupRepository groupR
         };
 
         await _groupRepository.AddAsync(entity);
-        return (true, null);
+        return (true, null, entity.Id);
     }
 
     public async Task<(bool success, string? error)> UpdateGroupAsync(int id, string name, string? description, string? color = null, string? userId = null)
@@ -335,7 +335,7 @@ public class MockService(IMockRepository repository, IMockGroupRepository groupR
 
         foreach (var mock in mocks)
         {
-            var existing = await _repository.GetActiveByRouteAndMethodAsync(mock.Route, mock.Method, mock.Id);
+            var existing = await _repository.GetActiveByRouteAndMethodAsync(mock.Route, mock.Method, mock.Id, mock.UserId);
 
             if (existing != null)
             {

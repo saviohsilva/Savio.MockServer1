@@ -2,6 +2,30 @@
    COMPONENTES CUSTOMIZADOS
    ======================================== */
 
+/* Tabelas com colunas redimensionáveis */
+.resizable-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.resizable-table th {
+    resize: horizontal;
+    overflow: hidden;
+    min-width: 50px;
+    position: relative;
+    white-space: nowrap;
+}
+
+.resizable-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.resizable-table td code {
+    white-space: nowrap;
+}
+
 /* Cards de estat�sticas */
 .card {
     border-radius: var(--border-radius);

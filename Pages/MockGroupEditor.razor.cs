@@ -22,6 +22,26 @@ public partial class MockGroupEditor
 
     private List<MockEndpoint> groupMocks = [];
     private List<MockEndpoint> availableMocks = [];
+    private List<MockEndpoint> pendingMocks = [];
+    private HashSet<string> pendingMockIds = [];
+
+    private string groupMocksFilter = string.Empty;
+    private string availableFilter = string.Empty;
+
+    private IEnumerable<MockEndpoint> FilteredGroupMocks =>
+        string.IsNullOrWhiteSpace(groupMocksFilter)
+            ? groupMocks
+            : groupMocks.Where(m => m.Route.Contains(groupMocksFilter, StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<MockEndpoint> FilteredAvailableMocks =>
+        string.IsNullOrWhiteSpace(availableFilter)
+            ? availableMocks
+            : availableMocks.Where(m => m.Route.Contains(availableFilter, StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<MockEndpoint> FilteredPendingMocks =>
+        string.IsNullOrWhiteSpace(availableFilter)
+            ? pendingMocks
+            : pendingMocks.Where(m => m.Route.Contains(availableFilter, StringComparison.OrdinalIgnoreCase));
 
     private bool IsEdit => Id > 0;
     private string? currentUserId;
@@ -45,9 +65,9 @@ public partial class MockGroupEditor
                 groupColor = string.IsNullOrWhiteSpace(group.Color) ? "#0d6efd" : group.Color;
                 groupMocks = group.MockEndpoints;
             }
-
-            availableMocks = await MockService.GetStandaloneMocksAsync();
         }
+
+        availableMocks = await MockService.GetStandaloneMocksAsync();
     }
 
     private async Task SaveGroup()
@@ -71,11 +91,16 @@ public partial class MockGroupEditor
         }
         else
         {
-            var (success, error) = await MockService.AddGroupAsync(groupName, groupDescription, groupColor, currentUserId);
+            var (success, error, newGroupId) = await MockService.AddGroupAsync(groupName, groupDescription, groupColor, currentUserId);
             if (!success)
             {
                 saveError = error;
                 return;
+            }
+
+            foreach (var mockId in pendingMockIds)
+            {
+                await MockService.AddMockToGroupAsync(mockId, newGroupId);
             }
         }
 
@@ -90,6 +115,25 @@ public partial class MockGroupEditor
     private void EditMock(string id)
     {
         Navigation.NavigateTo($"/mock/edit/{id}");
+    }
+
+    private void AddToPending(MockEndpoint mock)
+    {
+        if (pendingMockIds.Add(mock.Id))
+        {
+            pendingMocks.Add(mock);
+            availableMocks.Remove(mock);
+        }
+    }
+
+    private void RemoveFromPending(MockEndpoint mock)
+    {
+        if (pendingMockIds.Remove(mock.Id))
+        {
+            pendingMocks.Remove(mock);
+            availableMocks.Add(mock);
+            availableMocks = [.. availableMocks.OrderBy(m => m.Route)];
+        }
     }
 
     private async Task AddToGroup(string mockId)

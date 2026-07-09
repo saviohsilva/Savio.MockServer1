@@ -368,17 +368,30 @@ public partial class Mocks
 
     private async Task ActivateGroup(int groupId)
     {
-        var (success, error, conflicts) = await MockService.ActivateGroupMocksAsync(groupId);
-        if (!success)
+        var parameters = new ModalParameters
         {
-            ShowAlert("alert-warning", AlertIconWarning, error!, conflicts);
-        }
-        else
-        {
-            ShowAlert(AlertClassSuccess, AlertIconSuccess, "Todos os mocks do grupo foram ativados.");
-        }
+            { nameof(ConfirmDialog.Message), "Deseja ativar todos os mocks deste grupo?" },
+            { nameof(ConfirmDialog.Icon), "bi-toggle-on" },
+            { nameof(ConfirmDialog.IconColor), "success" }
+        };
+        var options = new ModalOptions { Size = ModalSize.Small };
+        var modal = Modal.Show<ConfirmDialog>("Confirmar Ativação", parameters, options);
+        var result = await modal.Result;
 
-        await LoadDataAsync();
+        if (!result.Cancelled)
+        {
+            var (success, error, conflicts) = await MockService.ActivateGroupMocksAsync(groupId);
+            if (!success)
+            {
+                ShowAlert("alert-warning", AlertIconWarning, error!, conflicts);
+            }
+            else
+            {
+                ShowAlert(AlertClassSuccess, AlertIconSuccess, "Todos os mocks do grupo foram ativados.");
+            }
+
+            await LoadDataAsync();
+        }
     }
 
     private async Task DeactivateGroup(int groupId)
