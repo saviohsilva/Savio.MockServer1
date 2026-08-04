@@ -671,6 +671,28 @@ main {
 .col-th-220   { width: 220px; }
 .col-th-40pct { width: 40%; }
 
+/* Coluna de ações: largura fixa em telas largas, livre para quebrar em telas menores */
+.actions-col { width: 230px; }
+
+.actions-cell .btn {
+    flex: 0 0 auto;
+}
+
+@media (max-width: 767.98px) {
+    .actions-col {
+        width: auto;
+        min-width: 120px;
+    }
+
+    .actions-cell {
+        gap: 0.35rem !important;
+    }
+
+    .actions-cell .btn {
+        flex: 1 1 calc(50% - 0.35rem);
+    }
+}
+
 /* Coluna de rota: sem quebra de linha para ceder espa�o ao Grupo primeiro */
 .route-cell { white-space: nowrap; }
 

@@ -1,0 +1,23 @@
+<div class="app-dialog-content">
+    <i class="bi bi-terminal fs-1 text-primary d-block mb-3 app-dialog-icon text-center"></i>
+    <p class="app-dialog-message text-center">Cole um comando cURL para preencher automaticamente rota, método, headers e body.</p>
+
+    <div class="mb-2">
+        <textarea class="form-control font-monospace" rows="6" @bind="curlText" @bind:event="oninput"
+                  placeholder='curl -X POST "https://api.exemplo.com/usuarios" -H "Content-Type: application/json" -d "{\"nome\":\"joao\"}"'></textarea>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger py-2 small mb-2">
+            <i class="bi bi-exclamation-triangle"></i> @errorMessage
+        </div>
+    }
+
+    <div class="d-flex justify-content-center gap-2 app-dialog-actions">
+        <button class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
+        <button class="btn btn-primary" @onclick="Import">
+            <i class="bi bi-download"></i> Importar
+        </button>
+    </div>
+</div>

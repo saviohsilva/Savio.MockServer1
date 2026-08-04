@@ -864,12 +864,18 @@ public class MockEndpointMiddleware(RequestDelegate next, ILogger<MockEndpointMi
         if (blob == null)
             return new ResponseBodyCapture(string.Empty, null, null, null);
 
-        context.Response.ContentType = blob.Value.contentType;
-        if (!string.IsNullOrWhiteSpace(blob.Value.fileName))
-            context.Response.Headers.ContentDisposition = $"attachment; filename=\"{blob.Value.fileName}\"";
+        var rawContentType = string.IsNullOrWhiteSpace(blob.Value.contentType)
+            ? "application/octet-stream"
+            : blob.Value.contentType;
+
+        var assessment = BinaryContentInspector.AssessForInlinePreview(blob.Value.bytes, rawContentType);
+
+        context.Response.ContentType = assessment.EffectiveContentType;
+        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        ApplySafeContentDisposition(context.Response, blob.Value.fileName, assessment.CanInlinePreview);
 
         await context.Response.Body.WriteAsync(blob.Value.bytes, context.RequestAborted);
-        return new ResponseBodyCapture(string.Empty, null, blob.Value.contentType, blob.Value.fileName);
+        return new ResponseBodyCapture(string.Empty, null, assessment.EffectiveContentType, blob.Value.fileName);
     }
 
     private static async Task<ResponseBodyCapture> WriteBase64ResponseAsync(
@@ -889,12 +895,28 @@ public class MockEndpointMiddleware(RequestDelegate next, ILogger<MockEndpointMi
             ? (mock.Headers.GetValueOrDefault("Content-Type") ?? "application/octet-stream")
             : mock.ResponseBodyContentType;
 
-        context.Response.ContentType = contentType;
-        if (!string.IsNullOrWhiteSpace(mock.ResponseBodyFileName))
-            context.Response.Headers.ContentDisposition = $"attachment; filename=\"{mock.ResponseBodyFileName}\"";
+        var assessment = BinaryContentInspector.AssessForInlinePreview(bytes, contentType);
+
+        context.Response.ContentType = assessment.EffectiveContentType;
+        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        ApplySafeContentDisposition(context.Response, mock.ResponseBodyFileName, assessment.CanInlinePreview);
 
         await context.Response.Body.WriteAsync(bytes, context.RequestAborted);
-        return new ResponseBodyCapture(string.Empty, mock.ResponseBodyBase64, contentType, mock.ResponseBodyFileName);
+        return new ResponseBodyCapture(string.Empty, mock.ResponseBodyBase64, assessment.EffectiveContentType, mock.ResponseBodyFileName);
+    }
+
+    private static void ApplySafeContentDisposition(HttpResponse response, string? fileName, bool canInlinePreview)
+    {
+        var dispositionType = canInlinePreview ? "inline" : "attachment";
+
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            response.Headers.ContentDisposition = dispositionType;
+            return;
+        }
+
+        var safeFileName = fileName.Replace("\"", string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty);
+        response.Headers.ContentDisposition = $"{dispositionType}; filename=\"{safeFileName}\"";
     }
 
     private async Task SaveRequestHistoryAsync(

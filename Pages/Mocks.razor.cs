@@ -324,6 +324,31 @@ public partial class Mocks
 
     // ── Ações de mock ──
 
+    private async Task ToggleMockActive(MockEndpoint mock)
+    {
+        var activate = !mock.IsActive;
+        var parameters = new ModalParameters
+        {
+            { nameof(ConfirmDialog.Message), activate ? "Deseja ativar este mock?" : "Deseja desativar este mock?" },
+            { nameof(ConfirmDialog.Icon), activate ? "bi-toggle-on" : "bi-toggle-off" },
+            { nameof(ConfirmDialog.IconColor), activate ? "success" : "secondary" }
+        };
+        var options = new ModalOptions { Size = ModalSize.Small };
+        var modal = Modal.Show<ConfirmDialog>(activate ? "Confirmar Ativação" : "Confirmar Desativação", parameters, options);
+        var result = await modal.Result;
+
+        if (result.Cancelled)
+            return;
+
+        var (success, error) = await MockService.SetMockActiveAsync(mock.Id, activate);
+        if (!success && error != null)
+        {
+            ShowAlert("alert-warning", AlertIconWarning, error);
+        }
+
+        await LoadDataAsync();
+    }
+
     private async Task DeleteMock(string id)
     {
         var parameters = new ModalParameters
@@ -366,20 +391,23 @@ public partial class Mocks
 
     // ── Ações de grupo ──
 
-    private async Task ActivateGroup(int groupId)
+    private async Task ToggleGroupActive(int groupId, bool activate)
     {
-        var parameters = new ModalParameters
+        if (activate)
         {
-            { nameof(ConfirmDialog.Message), "Deseja ativar todos os mocks deste grupo?" },
-            { nameof(ConfirmDialog.Icon), "bi-toggle-on" },
-            { nameof(ConfirmDialog.IconColor), "success" }
-        };
-        var options = new ModalOptions { Size = ModalSize.Small };
-        var modal = Modal.Show<ConfirmDialog>("Confirmar Ativação", parameters, options);
-        var result = await modal.Result;
+            var parameters = new ModalParameters
+            {
+                { nameof(ConfirmDialog.Message), "Deseja ativar todos os mocks deste grupo?" },
+                { nameof(ConfirmDialog.Icon), "bi-toggle-on" },
+                { nameof(ConfirmDialog.IconColor), "success" }
+            };
+            var options = new ModalOptions { Size = ModalSize.Small };
+            var modal = Modal.Show<ConfirmDialog>("Confirmar Ativação", parameters, options);
+            var result = await modal.Result;
 
-        if (!result.Cancelled)
-        {
+            if (result.Cancelled)
+                return;
+
             var (success, error, conflicts) = await MockService.ActivateGroupMocksAsync(groupId);
             if (!success)
             {
@@ -389,29 +417,27 @@ public partial class Mocks
             {
                 ShowAlert(AlertClassSuccess, AlertIconSuccess, "Todos os mocks do grupo foram ativados.");
             }
-
-            await LoadDataAsync();
         }
-    }
-
-    private async Task DeactivateGroup(int groupId)
-    {
-        var parameters = new ModalParameters
+        else
         {
-            { nameof(ConfirmDialog.Message), "Deseja desativar todos os mocks deste grupo?" },
-            { nameof(ConfirmDialog.Icon), "bi-toggle-off" },
-            { nameof(ConfirmDialog.IconColor), "secondary" }
-        };
-        var options = new ModalOptions { Size = ModalSize.Small };
-        var modal = Modal.Show<ConfirmDialog>("Confirmar Desativação", parameters, options);
-        var result = await modal.Result;
+            var parameters = new ModalParameters
+            {
+                { nameof(ConfirmDialog.Message), "Deseja desativar todos os mocks deste grupo?" },
+                { nameof(ConfirmDialog.Icon), "bi-toggle-off" },
+                { nameof(ConfirmDialog.IconColor), "secondary" }
+            };
+            var options = new ModalOptions { Size = ModalSize.Small };
+            var modal = Modal.Show<ConfirmDialog>("Confirmar Desativação", parameters, options);
+            var result = await modal.Result;
 
-        if (!result.Cancelled)
-        {
+            if (result.Cancelled)
+                return;
+
             await MockService.DeactivateGroupMocksAsync(groupId);
             ShowAlert(AlertClassSuccess, AlertIconSuccess, "Todos os mocks do grupo foram desativados.");
-            await LoadDataAsync();
         }
+
+        await LoadDataAsync();
     }
 
     private async Task DuplicateGroup(int groupId)

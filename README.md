@@ -431,6 +431,14 @@ Todos os arquivos Blazor seguem o padrão **code-behind**:
 
 ---
 
+## 🗺️ Roadmap
+
+As melhorias planejadas e em evolucao do projeto estao documentadas em:
+
+- [ROADMAP.md](ROADMAP.md)
+
+---
+
 ## 📄 Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.

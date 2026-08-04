@@ -1,10 +1,14 @@
 using Blazored.Modal;
 using Blazored.Modal.Services;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Microsoft.Net.Http.Headers;
 using Savio.MockServer.Components;
 using Savio.MockServer.Data.Entities;
+using Savio.MockServer.Helpers;
 using Savio.MockServer.Services;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 
@@ -13,6 +17,7 @@ namespace Savio.MockServer.Pages;
 public partial class HistoricoDetalhes
 {
     private const string EmptyLabel = "(vazio)";
+    private const string DownloadBase64File = "downloadBase64File";
     [CascadingParameter]
     public IModalService Modal { get; set; } = default!;
 
@@ -28,8 +33,29 @@ public partial class HistoricoDetalhes
     private Dictionary<string, string>? requestHeaders;
     private Dictionary<string, string>? responseHeaders;
     private Dictionary<string, string>? queryParams;
+    private BinaryPreviewState? requestBase64Preview = null;
+    private List<MultipartRequestFile> requestMultipartFiles = [];
     private byte[]? responseBlobContent = null;
+    private BinaryPreviewState? responseBlobPreview = null;
+    private BinaryPreviewState? responseBase64Preview = null;
     private bool loadingBlobContent = false;
+
+    private sealed record BinaryPreviewState(
+        bool CanPreview,
+        bool IsPdf,
+        string MimeType,
+        string? DataUrl,
+        long SizeBytes,
+        string? BlockReason);
+
+    private sealed record MultipartRequestFile(
+        string FieldName,
+        string FileName,
+        string ContentType,
+        byte[] Bytes,
+        BinaryPreviewState Preview);
+
+    private bool HasMultipartRequestFiles => requestMultipartFiles.Count > 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -50,6 +76,20 @@ public partial class HistoricoDetalhes
                 if (!string.IsNullOrEmpty(history.QueryString))
                 {
                     queryParams = ParseQueryString(history.QueryString);
+                }
+
+                if (!string.IsNullOrWhiteSpace(history.RequestBodyBase64))
+                {
+                    requestMultipartFiles = await ExtractMultipartRequestFilesAsync(history.RequestBodyBase64, history.RequestBodyContentType);
+                    if (!HasMultipartRequestFiles)
+                    {
+                        requestBase64Preview = BuildPreviewFromBase64(history.RequestBodyBase64, history.RequestBodyContentType);
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(history.ResponseBodyBase64))
+                {
+                    responseBase64Preview = BuildPreviewFromBase64(history.ResponseBodyBase64, history.ResponseBodyContentType);
                 }
             }
             catch
@@ -84,21 +124,35 @@ public partial class HistoricoDetalhes
 
     private string GetResponseFileName()
     {
-        if (!string.IsNullOrWhiteSpace(history?.ResponseBodyFileName))
-        {
-            return history.ResponseBodyFileName;
-        }
+        var baseName = !string.IsNullOrWhiteSpace(history?.ResponseBodyFileName)
+            ? history.ResponseBodyFileName
+            : BuildFallbackFileName("response", history?.ResponseBodyContentType);
 
-        return "response.bin";
+        return AppendRequestCodeToFileName(baseName);
     }
 
-    private string GetResponseDownloadUrl()
+    private string AppendRequestCodeToFileName(string originalFileName)
     {
-        var contentType = string.IsNullOrWhiteSpace(history?.ResponseBodyContentType)
-            ? "application/octet-stream"
-            : history.ResponseBodyContentType;
+        var sanitized = string.IsNullOrWhiteSpace(originalFileName) ? "arquivo" : originalFileName.Trim();
+        var extension = Path.GetExtension(sanitized);
+        var nameWithoutExtension = Path.GetFileNameWithoutExtension(sanitized);
+        var requestCode = history?.Id ?? Id;
 
-        return $"data:{contentType};base64,{history?.ResponseBodyBase64}";
+        var safeBase = string.IsNullOrWhiteSpace(nameWithoutExtension)
+            ? "arquivo"
+            : nameWithoutExtension;
+
+        var suffix = $"-req-{requestCode}";
+        if (safeBase.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+        {
+            return string.IsNullOrWhiteSpace(extension)
+                ? safeBase
+                : safeBase + extension;
+        }
+
+        return string.IsNullOrWhiteSpace(extension)
+            ? safeBase + suffix
+            : safeBase + suffix + extension;
     }
 
     private async Task CopyToClipboard(string text)
@@ -256,11 +310,6 @@ public partial class HistoricoDetalhes
 
         if (history.ResponseBinaryBlobId.HasValue)
         {
-            if (responseBlobContent != null && IsTextContent(history.ResponseBodyContentType))
-            {
-                return GetTextPreview(responseBlobContent);
-            }
-
             return "[Response body armazenado como blob. Use o botao de download para obter o arquivo completo.]";
         }
 
@@ -372,6 +421,7 @@ public partial class HistoricoDetalhes
             if (blob.HasValue)
             {
                 responseBlobContent = blob.Value.bytes;
+                responseBlobPreview = BuildPreviewState(blob.Value.bytes, blob.Value.contentType);
             }
         }
         catch (Exception ex)
@@ -396,10 +446,12 @@ public partial class HistoricoDetalhes
             {
                 var base64 = Convert.ToBase64String(blob.Value.bytes);
                 var contentType = blob.Value.contentType ?? "application/octet-stream";
-                var fileName = blob.Value.fileName ?? "response.bin";
+                var fileNameBase = string.IsNullOrWhiteSpace(blob.Value.fileName)
+                    ? BuildFallbackFileName("response", contentType)
+                    : blob.Value.fileName!;
 
-                var url = $"data:{contentType};base64,{base64}";
-                await Js.InvokeVoidAsync("eval", $"var a = document.createElement('a'); a.href = '{url}'; a.download = '{fileName}'; a.click();");
+                var fileName = AppendRequestCodeToFileName(fileNameBase);
+                await Js.InvokeVoidAsync(DownloadBase64File, base64, fileName, contentType);
             }
         }
         catch (Exception ex)
@@ -408,28 +460,220 @@ public partial class HistoricoDetalhes
         }
     }
 
-    private static bool IsTextContent(string? contentType)
+    private async Task DownloadResponseBase64()
     {
-        if (string.IsNullOrEmpty(contentType))
-            return false;
+        if (history == null || string.IsNullOrWhiteSpace(history.ResponseBodyBase64))
+            return;
 
-        return contentType.Contains("text/") ||
-               contentType.Contains("json") ||
-               contentType.Contains("xml") ||
-               contentType.Contains("javascript");
+        var fileName = GetResponseFileName();
+        var contentType = string.IsNullOrWhiteSpace(history.ResponseBodyContentType)
+            ? "application/octet-stream"
+            : history.ResponseBodyContentType;
+
+        await Js.InvokeVoidAsync(DownloadBase64File, history.ResponseBodyBase64, fileName, contentType);
     }
 
-    private static string GetTextPreview(byte[] bytes)
+    private async Task DownloadRequestBase64()
     {
+        if (history == null || string.IsNullOrWhiteSpace(history.RequestBodyBase64))
+            return;
+
+        var fileNameBase = string.IsNullOrWhiteSpace(history.RequestBodyFileName)
+            ? BuildFallbackFileName("request", history.RequestBodyContentType)
+            : history.RequestBodyFileName;
+
+        var fileName = AppendRequestCodeToFileName(fileNameBase);
+
+        var contentType = string.IsNullOrWhiteSpace(history.RequestBodyContentType)
+            ? "application/octet-stream"
+            : history.RequestBodyContentType;
+
+        await Js.InvokeVoidAsync(DownloadBase64File, history.RequestBodyBase64, fileName, contentType);
+    }
+
+    private async Task DownloadMultipartRequestFile(int index)
+    {
+        if (index < 0 || index >= requestMultipartFiles.Count)
+            return;
+
+        var file = requestMultipartFiles[index];
+        var base64 = Convert.ToBase64String(file.Bytes);
+        var fileName = AppendRequestCodeToFileName(file.FileName);
+        await Js.InvokeVoidAsync(DownloadBase64File, base64, fileName, file.ContentType);
+    }
+
+    private async Task DownloadMultipartRequestFileAsBase64(int index)
+    {
+        if (index < 0 || index >= requestMultipartFiles.Count)
+            return;
+
+        var file = requestMultipartFiles[index];
+        var base64Text = Convert.ToBase64String(file.Bytes);
+        var textBytes = Encoding.UTF8.GetBytes(base64Text);
+        var textBase64 = Convert.ToBase64String(textBytes);
+        var outputName = AppendRequestCodeToFileName(file.FileName) + ".base64.txt";
+
+        await Js.InvokeVoidAsync(DownloadBase64File, textBase64, outputName, "text/plain;charset=utf-8");
+    }
+
+    private async Task DownloadAllMultipartRequestFiles()
+    {
+        for (var i = 0; i < requestMultipartFiles.Count; i++)
+        {
+            await DownloadMultipartRequestFile(i);
+        }
+    }
+
+    private static string BuildFallbackFileName(string prefix, string? contentType)
+    {
+        var extension = GuessExtensionFromContentType(contentType);
+        return string.IsNullOrWhiteSpace(extension)
+            ? $"{prefix}.bin"
+            : $"{prefix}.{extension}";
+    }
+
+    private static string? GuessExtensionFromContentType(string? contentType)
+    {
+        if (string.IsNullOrWhiteSpace(contentType))
+        {
+            return null;
+        }
+
+        var separatorIndex = contentType.IndexOf(';');
+        var normalized = (separatorIndex >= 0 ? contentType[..separatorIndex] : contentType)
+            .Trim()
+            .ToLowerInvariant();
+
+        return normalized switch
+        {
+            "application/pdf" => "pdf",
+            "image/jpeg" => "jpg",
+            "image/jpg" => "jpg",
+            "image/png" => "png",
+            "image/gif" => "gif",
+            "image/webp" => "webp",
+            "image/bmp" => "bmp",
+            "image/tiff" => "tiff",
+            "application/json" => "json",
+            "text/plain" => "txt",
+            "text/xml" => "xml",
+            "application/xml" => "xml",
+            _ when normalized.StartsWith("text/") => "txt",
+            _ => null
+        };
+    }
+
+    private static bool IsMultipartFormData(string? contentType)
+    {
+        return !string.IsNullOrWhiteSpace(contentType)
+               && contentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase)
+               && contentType.Contains("boundary=", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<List<MultipartRequestFile>> ExtractMultipartRequestFilesAsync(string base64Body, string? contentType)
+    {
+        var files = new List<MultipartRequestFile>();
+        if (!IsMultipartFormData(contentType))
+            return files;
+
+        string boundary;
         try
         {
-            var text = Encoding.UTF8.GetString(bytes);
-            return text.Length > 10000 ? text[..10000] + "\n\n... (truncado)" : text;
+            var mediaType = MediaTypeHeaderValue.Parse(contentType!);
+            boundary = HeaderUtilities.RemoveQuotes(mediaType.Boundary).Value ?? string.Empty;
         }
         catch
         {
-            return "[Não foi possível decodificar como texto UTF-8]";
+            return files;
         }
+
+        if (string.IsNullOrWhiteSpace(boundary))
+            return files;
+
+        byte[] rawBytes;
+        try
+        {
+            rawBytes = Convert.FromBase64String(base64Body);
+        }
+        catch
+        {
+            return files;
+        }
+
+        using var stream = new MemoryStream(rawBytes);
+        var reader = new MultipartReader(boundary, stream);
+
+        MultipartSection? section;
+        while ((section = await reader.ReadNextSectionAsync()) != null)
+        {
+            if (!ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var contentDisposition))
+                continue;
+
+            var fileName = HeaderUtilities.RemoveQuotes(contentDisposition.FileNameStar).Value;
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = HeaderUtilities.RemoveQuotes(contentDisposition.FileName).Value;
+            }
+
+            if (string.IsNullOrWhiteSpace(fileName))
+                continue;
+
+            var fieldName = HeaderUtilities.RemoveQuotes(contentDisposition.Name).Value ?? "file";
+            var partContentType = string.IsNullOrWhiteSpace(section.ContentType)
+                ? "application/octet-stream"
+                : section.ContentType;
+
+            using var ms = new MemoryStream();
+            await section.Body.CopyToAsync(ms);
+            var bytes = ms.ToArray();
+
+            files.Add(new MultipartRequestFile(
+                fieldName,
+                fileName,
+                partContentType,
+                bytes,
+                BuildPreviewState(bytes, partContentType)));
+        }
+
+        return files;
+    }
+
+    private static BinaryPreviewState? BuildPreviewFromBase64(string? base64Value, string? declaredContentType)
+    {
+        if (string.IsNullOrWhiteSpace(base64Value))
+            return null;
+
+        try
+        {
+            var bytes = Convert.FromBase64String(base64Value);
+            return BuildPreviewState(bytes, declaredContentType);
+        }
+        catch
+        {
+            return new BinaryPreviewState(
+                false,
+                false,
+                string.IsNullOrWhiteSpace(declaredContentType) ? "application/octet-stream" : declaredContentType,
+                null,
+                0,
+                "Base64 invalido para gerar pre-visualizacao.");
+        }
+    }
+
+    private static BinaryPreviewState BuildPreviewState(byte[] bytes, string? declaredContentType)
+    {
+        var assessment = BinaryContentInspector.AssessForInlinePreview(bytes, declaredContentType);
+        var dataUrl = assessment.CanInlinePreview
+            ? $"data:{assessment.EffectiveContentType};base64,{Convert.ToBase64String(bytes)}"
+            : null;
+
+        return new BinaryPreviewState(
+            assessment.CanInlinePreview,
+            assessment.IsPdf,
+            assessment.EffectiveContentType,
+            dataUrl,
+            bytes.LongLength,
+            assessment.BlockReason);
     }
 
     private static string FormatFileSize(long bytes)

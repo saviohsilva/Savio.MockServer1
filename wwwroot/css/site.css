@@ -2,10 +2,10 @@
    Savio MOCK SERVER - ESTILOS PRINCIPAIS
    
    Estrutura modular:
-    - theme.css: Variáveis e tema da aplição
+    - theme.css: Variï¿½veis e tema da apliï¿½ï¿½o
    - layout.css: Estrutura de layout e grid
-   - components.css: Componentes reutilizáveis
-   - utilities.css: Classes utilitárias
+   - components.css: Componentes reutilizï¿½veis
+   - utilities.css: Classes utilitï¿½rias
    ======================================== */
 
 /* Estilos base */
@@ -35,7 +35,14 @@ textarea:focus {
     outline-offset: 2px;
 }
 
-/* Exceções de transição - elementos interativos */
+/* Texto de exemplo (placeholder) mais claro que o texto digitado pelo usuÃ¡rio */
+.form-control::placeholder,
+.form-select::placeholder {
+    color: #adb5bd;
+    opacity: 1;
+}
+
+/* Exceï¿½ï¿½es de transiï¿½ï¿½o - elementos interativos */
 button,
 a,
 .btn,

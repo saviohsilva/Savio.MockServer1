@@ -22,6 +22,14 @@ public static class HttpRequestCaptureService
 
         if (request.HasFormContentType)
         {
+            byte[] rawMultipartBytes;
+            using (var rawMs = new MemoryStream())
+            {
+                await request.Body.CopyToAsync(rawMs);
+                rawMultipartBytes = rawMs.ToArray();
+            }
+            request.Body.Position = 0;
+
             var form = await request.ReadFormAsync();
 
             var payload = new MultipartPayload();
@@ -48,8 +56,7 @@ public static class HttpRequestCaptureService
                     Name = file.Name,
                     FileName = file.FileName,
                     ContentType = contentType,
-                    Length = file.Length,
-                    Base64 = Convert.ToBase64String(ms.ToArray())
+                    Length = file.Length
                 });
             }
 
@@ -58,32 +65,43 @@ public static class HttpRequestCaptureService
             return new CapturedRequest(
                 TextBody: null,
                 FormJson: JsonSerializer.Serialize(payload),
-                BodyBase64: null,
+                BodyBase64: rawMultipartBytes.Length > 0 ? Convert.ToBase64String(rawMultipartBytes) : null,
                 BodyContentType: requestContentType,
                 BodyFileName: null);
         }
 
         try
         {
-            using var reader = new StreamReader(request.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
-            var text = await reader.ReadToEndAsync();
+            using var ms = new MemoryStream();
+            await request.Body.CopyToAsync(ms);
             request.Body.Position = 0;
 
-            if (text.Any(ch => ch == '\0'))
+            var bytes = ms.ToArray();
+
+            if (bytes.Length == 0)
             {
-                var bytes = Encoding.UTF8.GetBytes(text);
                 return new CapturedRequest(
-                    TextBody: null,
+                    TextBody: string.Empty,
                     FormJson: null,
-                    BodyBase64: Convert.ToBase64String(bytes),
+                    BodyBase64: null,
+                    BodyContentType: requestContentType,
+                    BodyFileName: null);
+            }
+
+            if (IsTextBasedContentType(requestContentType) && TryDecodeUtf8(bytes, out var textBody))
+            {
+                return new CapturedRequest(
+                    TextBody: textBody,
+                    FormJson: null,
+                    BodyBase64: null,
                     BodyContentType: requestContentType,
                     BodyFileName: null);
             }
 
             return new CapturedRequest(
-                TextBody: text,
+                TextBody: null,
                 FormJson: null,
-                BodyBase64: null,
+                BodyBase64: Convert.ToBase64String(bytes),
                 BodyContentType: requestContentType,
                 BodyFileName: null);
         }
@@ -100,6 +118,34 @@ public static class HttpRequestCaptureService
                 BodyBase64: Convert.ToBase64String(ms.ToArray()),
                 BodyContentType: requestContentType,
                 BodyFileName: null);
+        }
+    }
+
+    private static bool IsTextBasedContentType(string? contentType)
+    {
+        if (string.IsNullOrWhiteSpace(contentType))
+        {
+            return false;
+        }
+
+        return contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
+               || contentType.Contains("json", StringComparison.OrdinalIgnoreCase)
+               || contentType.Contains("xml", StringComparison.OrdinalIgnoreCase)
+               || contentType.Contains("javascript", StringComparison.OrdinalIgnoreCase)
+               || contentType.Contains("x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryDecodeUtf8(byte[] bytes, out string text)
+    {
+        try
+        {
+            text = new UTF8Encoding(false, true).GetString(bytes);
+            return true;
+        }
+        catch
+        {
+            text = string.Empty;
+            return false;
         }
     }
 }

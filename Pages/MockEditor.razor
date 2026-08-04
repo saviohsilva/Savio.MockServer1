@@ -10,6 +10,7 @@
 @inject IMockBinaryStorage BinaryStorage
 @inject NavigationManager Navigation
 @inject UserManager<ApplicationUser> UserManager
+@inject IJSRuntime JS
 
 <PageTitle>@(IsEdit ? "Editar Mock" : "Novo Mock")</PageTitle>
 
@@ -21,6 +22,9 @@
             </h1>
         </div>
         <div class="col-auto">
+            <button class="btn btn-outline-primary me-2" @onclick="OpenCurlImportDialog">
+                <i class="bi bi-terminal"></i> Importar via cURL
+            </button>
             <button class="btn btn-secondary" @onclick="Cancel">
                 <i class="bi bi-arrow-left"></i> Voltar
             </button>
@@ -421,8 +425,11 @@
                             <input type="radio" class="btn-check" name="responseType" id="jsonRadio" @onchange="() => SetResponseType(true)" checked="@useJson">
                             <label class="btn btn-outline-primary" for="jsonRadio">JSON</label>
 
-                            <input type="radio" class="btn-check" name="responseType" id="rawRadio" @onchange="() => SetResponseType(false)" checked="@(!useJson && !useBinary && !useMultipart)">
+                            <input type="radio" class="btn-check" name="responseType" id="rawRadio" @onchange="() => SetResponseType(false)" checked="@(!useJson && !useBinary && !useMultipart && !useFormUrlEncoded)">
                             <label class="btn btn-outline-primary" for="rawRadio">Raw/Primitivo</label>
+
+                            <input type="radio" class="btn-check" name="responseType" id="formUrlEncodedRadio" @onchange="() => SetResponseFormUrlEncoded()" checked="@useFormUrlEncoded">
+                            <label class="btn btn-outline-primary" for="formUrlEncodedRadio">Form URL Encoded</label>
 
                             <input type="radio" class="btn-check" name="responseType" id="binRadio" @onchange="() => SetResponseBinary()" checked="@useBinary">
                             <label class="btn btn-outline-primary" for="binRadio">Binário (Arquivo)</label>
@@ -442,15 +449,53 @@
                         </div>
 
                         <div class="mb-2">
-                            <label class="form-label">Adicionar arquivo como part</label>
+                            <label class="form-label">Adicionar arquivo como part (blob persistido)</label>
                             <InputFile OnChange="OnMultipartFileSelected" />
-                            @if (!string.IsNullOrEmpty(uploadedMultipartError))
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label">Adicionar arquivo como part (byte array embutido no JSON)</label>
+                            <InputFile OnChange="OnMultipartFileEmbeddedSelected" />
+                        </div>
+
+                        <div class="mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddMultipartJsonPart">
+                                <i class="bi bi-plus"></i> Adicionar Part JSON
+                            </button>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(uploadedMultipartError))
+                        {
+                            <div class="text-danger small">
+                                <i class="bi bi-exclamation-circle"></i> @uploadedMultipartError
+                            </div>
+                        }
+                    }
+                    else if (useFormUrlEncoded)
+                    {
+                        <div class="mb-2">
+                            <label class="form-label">Campos (chave/valor)</label>
+                            @foreach (var field in formFieldsInput)
                             {
-                                <div class="text-danger small">
-                                    <i class="bi bi-exclamation-circle"></i> @uploadedMultipartError
+                                <div class="row mb-2">
+                                    <div class="col-5">
+                                        <input type="text" class="form-control" placeholder="Nome do campo" @bind="field.Key" />
+                                    </div>
+                                    <div class="col-5">
+                                        <input type="text" class="form-control" placeholder="Valor" @bind="field.Value" />
+                                    </div>
+                                    <div class="col-2">
+                                        <button class="btn btn-danger w-100" @onclick="() => RemoveFormField(field)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             }
+                            <button class="btn btn-sm btn-outline-primary" @onclick="AddFormField">
+                                <i class="bi bi-plus"></i> Adicionar Campo
+                            </button>
                         </div>
+                        <small class="form-text text-muted">Gera um body <code>application/x-www-form-urlencoded</code> e ajusta o header Content-Type automaticamente ao salvar.</small>
                     }
                     else if (useBinary)
                     {
@@ -488,6 +533,9 @@
             </div>
 
             <div class="d-flex justify-content-end gap-2">
+                <button class="btn btn-outline-secondary" @onclick="OpenCurlExportDialog">
+                    <i class="bi bi-terminal"></i> Copiar como cURL
+                </button>
                 <button class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
                 <button class="btn btn-primary" @onclick="Save">
                     <i class="bi bi-save"></i> Salvar Mock
@@ -511,8 +559,9 @@
                     <ul class="small">
                         <li><strong>JSON:</strong> Para objetos e arrays</li>
                         <li><strong>Raw/Primitivo:</strong> Para números (<code>12345</code>) ou texto simples</li>
+                        <li><strong>Form URL Encoded:</strong> Gera body <code>chave=valor&amp;...</code> com Content-Type ajustado automaticamente</li>
                         <li><strong>Binário:</strong> Para arquivos (PDF/Imagem/etc) via Base64</li>
-                        <li><strong>Multipart (JSON):</strong> Para respostas mais complexas com múltiplas partes</li>
+                        <li><strong>Multipart (JSON):</strong> Para respostas mais complexas com múltiplas partes (arquivo via blob, arquivo embutido em Base64 ou parte JSON)</li>
                     </ul>
 
                     <hr />

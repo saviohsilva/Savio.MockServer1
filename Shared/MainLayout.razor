@@ -1,5 +1,7 @@
 ﻿@inherits LayoutComponentBase
 
+<BlazoredToasts Position="ToastPosition.TopRight" Timeout="6" ShowProgressBar="true" />
+
 <div class="page @(isSidebarCollapsed ? "sidebar-collapsed" : string.Empty)">
     <div class="sidebar @(isSidebarCollapsed ? "is-collapsed" : string.Empty)">
         <div class="top-row ps-3 navbar navbar-dark">

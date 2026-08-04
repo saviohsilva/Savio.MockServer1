@@ -1,13 +1,20 @@
+using Blazored.Modal;
+using Blazored.Modal.Services;
+using Blazored.Toast.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.JSInterop;
+using Savio.MockServer.Components;
 using Savio.MockServer.Data.Entities;
+using Savio.MockServer.Helpers;
 using Savio.MockServer.Models;
 using Savio.MockServer.Security;
 using Savio.MockServer.Services;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Savio.MockServer.Pages;
 
@@ -22,6 +29,8 @@ public partial class MockEditor
     [Inject] private BrowserTimezoneService TimezoneService { get; set; } = default!;
     [Inject] private MockAuthConfigService AuthConfigService { get; set; } = default!;
     [Inject] private CertificateService CertificateService { get; set; } = default!;
+    [Inject] private IModalService Modal { get; set; } = default!;
+    [Inject] private IToastService ToastService { get; set; } = default!;
 
     private MockEndpoint mock = new()
     {
@@ -53,6 +62,8 @@ public partial class MockEditor
     private bool useJson = true;
     private bool useBinary = false;
     private bool useMultipart = false;
+    private bool useFormUrlEncoded = false;
+    private List<HeaderInput> formFieldsInput = [];
     private bool IsEdit => !string.IsNullOrEmpty(Id);
     private string? saveError;
     private string? currentUserId;
@@ -65,6 +76,8 @@ public partial class MockEditor
     private IBrowserFile? uploadedBinaryFile;
     private string? uploadedBinaryError;
     private string? uploadedMultipartError;
+    private string curlExportText = string.Empty;
+    private List<string> curlExportWarnings = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -129,9 +142,16 @@ public partial class MockEditor
 
         mock = existing;
 
+        var contentTypeHeader = mock.Headers.FirstOrDefault(h => h.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)).Value;
+
         useMultipart = !string.IsNullOrWhiteSpace(mock.ResponseMultipartJson);
         useBinary = !useMultipart && (mock.ResponseBinaryBlobId.HasValue || !string.IsNullOrWhiteSpace(mock.ResponseBodyBase64));
-        useJson = !useMultipart && !useBinary && !string.IsNullOrEmpty(mock.ResponseBodyJson);
+        useFormUrlEncoded = !useMultipart && !useBinary && !string.IsNullOrEmpty(mock.ResponseBodyRaw)
+            && contentTypeHeader?.Contains("x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase) == true;
+        useJson = !useMultipart && !useBinary && !useFormUrlEncoded && !string.IsNullOrEmpty(mock.ResponseBodyJson);
+
+        if (useFormUrlEncoded)
+            formFieldsInput = ParseFormUrlEncoded(mock.ResponseBodyRaw);
 
         headersInput = [.. mock.Headers.Select(h => new HeaderInput { Key = h.Key, Value = h.Value })];
 
@@ -298,6 +318,7 @@ public partial class MockEditor
     {
         useMultipart = false;
         useBinary = false;
+        useFormUrlEncoded = false;
         useJson = json;
 
         uploadedBinaryFile = null;
@@ -327,6 +348,7 @@ public partial class MockEditor
     {
         useMultipart = false;
         useBinary = true;
+        useFormUrlEncoded = false;
         useJson = false;
 
         mock.ResponseMultipartJson = string.Empty;
@@ -340,10 +362,55 @@ public partial class MockEditor
         }
     }
 
+    private void SetResponseFormUrlEncoded()
+    {
+        useMultipart = false;
+        useBinary = false;
+        useJson = false;
+        useFormUrlEncoded = true;
+
+        mock.ResponseMultipartJson = string.Empty;
+        mock.ResponseBodyJson = string.Empty;
+        mock.ResponseBinaryBlobId = null;
+        mock.ResponseBodyBase64 = string.Empty;
+        mock.ResponseBodyContentType = string.Empty;
+        mock.ResponseBodyFileName = string.Empty;
+
+        if (formFieldsInput.Count == 0)
+            formFieldsInput.Add(new HeaderInput());
+    }
+
+    private void AddFormField() => formFieldsInput.Add(new HeaderInput());
+
+    private void RemoveFormField(HeaderInput field) => formFieldsInput.Remove(field);
+
+    private static List<HeaderInput> ParseFormUrlEncoded(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+            return [];
+
+        var parsed = QueryHelpers.ParseQuery(body.StartsWith('?') ? body : "?" + body);
+        return [.. parsed.Select(kv => new HeaderInput { Key = kv.Key, Value = kv.Value.ToString() })];
+    }
+
+    private static string BuildFormUrlEncodedBody(IEnumerable<HeaderInput> fields) => string.Join('&',
+        fields.Where(f => !string.IsNullOrEmpty(f.Key))
+              .Select(f => $"{Uri.EscapeDataString(f.Key)}={Uri.EscapeDataString(f.Value ?? string.Empty)}"));
+
+    private void EnsureContentTypeHeader(string contentType)
+    {
+        var existing = headersInput.FirstOrDefault(h => h.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase));
+        if (existing != null)
+            existing.Value = contentType;
+        else
+            headersInput.Add(new HeaderInput { Key = "Content-Type", Value = contentType });
+    }
+
     private void SetResponseMultipart()
     {
         useMultipart = true;
         useBinary = false;
+        useFormUrlEncoded = false;
         useJson = false;
 
         mock.ResponseBodyJson = string.Empty;
@@ -411,20 +478,7 @@ public partial class MockEditor
 
             var blobId = await BinaryStorage.SaveAsync(ms.ToArray(), file.ContentType, file.Name);
 
-            MultipartResponse? multipart;
-            try
-            {
-                multipart = string.IsNullOrWhiteSpace(mock.ResponseMultipartJson)
-                    ? null
-                    : JsonSerializer.Deserialize<MultipartResponse>(mock.ResponseMultipartJson, _caseInsensitiveOptions);
-            }
-            catch
-            {
-                multipart = null;
-            }
-
-            multipart ??= new MultipartResponse { Subtype = "mixed" };
-
+            var multipart = ParseOrCreateMultipart();
             multipart.Parts.Add(new MultipartResponse.Part
             {
                 FileName = file.Name,
@@ -440,9 +494,216 @@ public partial class MockEditor
         }
     }
 
+    /// <summary>Anexa o arquivo como byte array (Base64) embutido no próprio JSON, sem depender de blob storage.</summary>
+    private async Task OnMultipartFileEmbeddedSelected(InputFileChangeEventArgs e)
+    {
+        uploadedMultipartError = null;
+        var file = e.File;
+        if (file == null)
+        {
+            return;
+        }
+
+        try
+        {
+            const long maxBytes = 5 * 1024 * 1024;
+            await using var stream = file.OpenReadStream(maxBytes);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+
+            var multipart = ParseOrCreateMultipart();
+            multipart.Parts.Add(new MultipartResponse.Part
+            {
+                FileName = file.Name,
+                ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                Base64 = Convert.ToBase64String(ms.ToArray())
+            });
+
+            mock.ResponseMultipartJson = JsonSerializer.Serialize(multipart, _indentedOptions);
+        }
+        catch (Exception ex)
+        {
+            uploadedMultipartError = ex.Message;
+        }
+    }
+
+    private void AddMultipartJsonPart()
+    {
+        var multipart = ParseOrCreateMultipart();
+        multipart.Parts.Add(new MultipartResponse.Part
+        {
+            Headers = new Dictionary<string, string> { ["Content-Type"] = "application/json" },
+            Text = "{\n  \"chave\": \"valor\"\n}"
+        });
+
+        mock.ResponseMultipartJson = JsonSerializer.Serialize(multipart, _indentedOptions);
+    }
+
+    private MultipartResponse ParseOrCreateMultipart()
+    {
+        MultipartResponse? multipart;
+        try
+        {
+            multipart = string.IsNullOrWhiteSpace(mock.ResponseMultipartJson)
+                ? null
+                : JsonSerializer.Deserialize<MultipartResponse>(mock.ResponseMultipartJson, _caseInsensitiveOptions);
+        }
+        catch
+        {
+            multipart = null;
+        }
+
+        return multipart ?? new MultipartResponse { Subtype = "mixed" };
+    }
+
+
+    // ── Importar/Exportar cURL ──
+
+    private async Task OpenCurlImportDialog()
+    {
+        var options = new ModalOptions { Size = ModalSize.Large };
+        var modal = Modal.Show<CurlImportDialog>("Importar cURL", options);
+        var result = await modal.Result;
+
+        if (result.Cancelled)
+            return;
+
+        ApplyCurlImport((CurlParseResult)result.Data!);
+    }
+
+    private void ApplyCurlImport(CurlParseResult result)
+    {
+        var warnings = result.Warnings;
+
+        mock.Route = result.Route;
+        mock.Method = AllowedMethods.Contains(result.Method) ? result.Method : "GET";
+
+        headersInput = result.Headers.Count > 0
+            ? [.. result.Headers.Select(h => new HeaderInput { Key = h.Key, Value = h.Value })]
+            : [];
+
+        if (!string.IsNullOrWhiteSpace(result.Body))
+        {
+            if (TryFormatJson(result.Body, out var formatted))
+            {
+                SetResponseType(true);
+                mock.ResponseBodyJson = formatted;
+            }
+            else if (TryConvertFormUrlEncodedToJson(result.Body, out var converted))
+            {
+                SetResponseType(true);
+                mock.ResponseBodyJson = converted;
+                warnings.Add("Body do request era form-urlencoded; sugestão de response body em JSON gerada a partir dos campos — ajuste conforme a resposta real da API.");
+            }
+            else
+            {
+                SetResponseType(false);
+                mock.ResponseBodyRaw = result.Body;
+            }
+        }
+
+        if (warnings.Count > 0)
+        {
+            ToastService.ShowWarning($"cURL importado — ajuste manual necessário: {string.Join(" ", warnings)}");
+        }
+        else
+        {
+            ToastService.ShowSuccess("cURL importado — rota, método, headers e body preenchidos.");
+        }
+    }
+
+
+    private static readonly string[] AllowedMethods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
+
+    private static readonly Regex FormUrlEncodedPattern = new(@"^[^=&]+=[^&]*(&[^=&]+=[^&]*)*$", RegexOptions.Compiled);
+
+    /// <summary>Converte um body "a=1&b=2" em um objeto JSON, como ponto de partida para o response body.</summary>
+    private static bool TryConvertFormUrlEncodedToJson(string body, out string formatted)
+    {
+        formatted = string.Empty;
+        if (!FormUrlEncodedPattern.IsMatch(body))
+            return false;
+
+        var parsed = QueryHelpers.ParseQuery("?" + body);
+        if (parsed.Count == 0)
+            return false;
+
+        var dict = parsed.ToDictionary(kv => kv.Key, kv => kv.Value.ToString());
+        formatted = JsonSerializer.Serialize(dict, _indentedOptions);
+        return true;
+    }
+
+    private static bool TryFormatJson(string body, out string formatted)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            formatted = JsonSerializer.Serialize(doc.RootElement, _indentedOptions);
+            return true;
+        }
+        catch
+        {
+            formatted = body;
+            return false;
+        }
+    }
+
+    private void GenerateCurl()
+    {
+        curlExportWarnings = [];
+
+        var baseUrl = Navigation.BaseUri.TrimEnd('/');
+        var route = mock.Route.StartsWith('/') ? mock.Route : "/" + mock.Route;
+        var url = baseUrl + route;
+
+        var headers = headersInput
+            .Where(h => !string.IsNullOrEmpty(h.Key))
+            .ToDictionary(h => h.Key, h => h.Value ?? string.Empty);
+
+        string? body = null;
+        if (useJson)
+        {
+            body = mock.ResponseBodyJson;
+        }
+        else if (useFormUrlEncoded)
+        {
+            body = BuildFormUrlEncodedBody(formFieldsInput);
+        }
+        else if (!useBinary && !useMultipart)
+        {
+            body = mock.ResponseBodyRaw;
+        }
+        else
+        {
+            curlExportWarnings.Add("Corpo binário/multipart não é representado no comando cURL.");
+        }
+
+        curlExportText = CurlHelper.BuildCurlCommand(mock.Method, url, headers, body);
+    }
+
+    private async Task OpenCurlExportDialog()
+    {
+        GenerateCurl();
+
+        var parameters = new ModalParameters
+        {
+            { nameof(CurlExportDialog.CurlText), curlExportText },
+            { nameof(CurlExportDialog.Warnings), curlExportWarnings }
+        };
+        var options = new ModalOptions { Size = ModalSize.Large };
+        var modal = Modal.Show<CurlExportDialog>("Exportar como cURL", parameters, options);
+        await modal.Result;
+    }
+
     private async Task Save()
     {
         saveError = null;
+
+        if (useFormUrlEncoded)
+        {
+            mock.ResponseBodyRaw = BuildFormUrlEncodedBody(formFieldsInput);
+            EnsureContentTypeHeader("application/x-www-form-urlencoded");
+        }
 
         mock.Headers = headersInput
             .Where(h => !string.IsNullOrEmpty(h.Key))
@@ -549,18 +810,5 @@ public partial class MockEditor
     {
         public string Key { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
-    }
-
-    private sealed class MultipartResponse
-    {
-        public string Subtype { get; set; } = string.Empty;
-        public List<Part> Parts { get; set; } = [];
-
-        public class Part
-        {
-            public string? FileName { get; set; }
-            public string? ContentType { get; set; }
-            public long? BlobId { get; set; }
-        }
     }
 }

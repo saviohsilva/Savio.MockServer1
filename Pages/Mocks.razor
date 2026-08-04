@@ -188,7 +188,7 @@
                                     <th role="button" @onclick='() => ToggleSort("calls")'>
                                         Chamadas <i class="bi @GetSortIcon("calls")"></i>
                                     </th>
-                                    <th class="col-th-200">Ações</th>
+                                    <th class="actions-col">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -217,7 +217,10 @@
                                         </td>
                                         <td><span class="badge bg-info">@mock.CallCount</span></td>
                                         <td>
-                                            <div class="btn-group" role="group">
+                                            <div class="d-flex flex-wrap gap-1 actions-cell">
+                                                <button class="btn btn-sm @(mock.IsActive ? "btn-outline-secondary" : "btn-outline-success")" title="@(mock.IsActive ? "Desativar" : "Ativar")" @onclick="() => ToggleMockActive(mock)" disabled="@IsScopedToAnotherUser">
+                                                    <i class="bi @(mock.IsActive ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                                </button>
                                                 <button class="btn btn-sm btn-outline-primary" title="Editar" @onclick="() => NavigateToEdit(mock.Id)" disabled="@IsScopedToAnotherUser">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
@@ -280,14 +283,30 @@
                                             }
                                         </button>
                                         <div class="d-flex gap-1 me-3">
-                                            <button class="btn btn-sm btn-outline-success" title="Ativar todos os mocks"
-                                                    @onclick="() => ActivateGroup(group.Id)" @onclick:stopPropagation="true" disabled="@IsScopedToAnotherUser">
-                                                <i class="bi bi-toggle-on"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-secondary" title="Desativar todos os mocks"
-                                                    @onclick="() => DeactivateGroup(group.Id)" @onclick:stopPropagation="true" disabled="@IsScopedToAnotherUser">
-                                                <i class="bi bi-toggle-off"></i>
-                                            </button>
+                                            @{
+                                                var hasMocks = group.MockEndpoints.Count > 0;
+                                                var allActive = hasMocks && group.MockEndpoints.All(m => m.IsActive);
+                                                var allInactive = hasMocks && group.MockEndpoints.All(m => !m.IsActive);
+                                            }
+                                            @if (allActive || allInactive)
+                                            {
+                                                <button class="btn btn-sm @(allActive ? "btn-outline-secondary" : "btn-outline-success")"
+                                                        title="@(allActive ? "Desativar todos os mocks" : "Ativar todos os mocks")"
+                                                        @onclick="() => ToggleGroupActive(group.Id, !allActive)" @onclick:stopPropagation="true" disabled="@IsScopedToAnotherUser">
+                                                    <i class="bi @(allActive ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-outline-success" title="Ativar todos os mocks"
+                                                        @onclick="() => ToggleGroupActive(group.Id, true)" @onclick:stopPropagation="true" disabled="@IsScopedToAnotherUser">
+                                                    <i class="bi bi-toggle-on"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary" title="Desativar todos os mocks"
+                                                        @onclick="() => ToggleGroupActive(group.Id, false)" @onclick:stopPropagation="true" disabled="@IsScopedToAnotherUser">
+                                                    <i class="bi bi-toggle-off"></i>
+                                                </button>
+                                            }
                                             <button class="btn btn-sm btn-outline-primary" title="Editar grupo"
                                                     @onclick="() => NavigateToEditGroup(group.Id)" @onclick:stopPropagation="true" disabled="@IsScopedToAnotherUser">
                                                 <i class="bi bi-pencil"></i>
@@ -329,7 +348,7 @@
                                                                 <th>Código</th>
                                                                 <th>Descrição</th>
                                                                 <th>Chamadas</th>
-                                                                <th class="col-th-200">Ações</th>
+                                                                <th class="actions-col">Ações</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -343,7 +362,10 @@
                                                                     <td>@mock.Description</td>
                                                                     <td><span class="badge bg-info">@mock.CallCount</span></td>
                                                                     <td>
-                                                                        <div class="btn-group" role="group">
+                                                                        <div class="d-flex flex-wrap gap-1 actions-cell">
+                                                                            <button class="btn btn-sm @(mock.IsActive ? "btn-outline-secondary" : "btn-outline-success")" title="@(mock.IsActive ? "Desativar" : "Ativar")" @onclick="() => ToggleMockActive(mock)" disabled="@IsScopedToAnotherUser">
+                                                                                <i class="bi @(mock.IsActive ? "bi-toggle-on" : "bi-toggle-off")"></i>
+                                                                            </button>
                                                                             <button class="btn btn-sm btn-outline-primary" title="Editar" @onclick="() => NavigateToEdit(mock.Id)" disabled="@IsScopedToAnotherUser">
                                                                                 <i class="bi bi-pencil"></i>
                                                                             </button>
