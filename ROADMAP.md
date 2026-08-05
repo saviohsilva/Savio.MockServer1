@@ -88,6 +88,20 @@ Status:
   - Reaproveita o parser/gerador de cURL existente (import/export) para ida e volta rapida com o cliente.
   - Historico de chamadas realizadas pelo cliente fica disponivel para reconsulta.
 
+### 7) Visualizacao de JSON em arvore
+
+- Status: Planned
+- Objetivo:
+  - Exibir bodies JSON (request/response no historico, e editores de body de mock) em uma visualizacao em arvore expansivel/colapsavel.
+  - Mostrar a contagem de itens de cada no (ex.: `[2]` para arrays, `{2}` para objetos) e realce de sintaxe por tipo (chave, string, numero).
+- Valor:
+  - Facilita a leitura e navegacao de payloads JSON grandes ou profundamente aninhados.
+  - Reduz a necessidade de copiar o JSON para uma ferramenta externa so para inspecionar a estrutura.
+- Criterios de aceite (alto nivel):
+  - Usuario pode alternar entre visualizacao em texto puro (atual) e visualizacao em arvore.
+  - Nos de objeto/array podem ser expandidos e colapsados individualmente, exibindo a contagem de filhos.
+  - JSON invalido ou nao-JSON mantem a exibicao em texto puro sem quebrar a tela.
+
 ## Como contribuir com o roadmap
 
 - Abra uma issue descrevendo problema, impacto e sugestao.
