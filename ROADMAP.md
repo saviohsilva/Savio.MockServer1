@@ -102,6 +102,19 @@ Status:
   - Nos de objeto/array podem ser expandidos e colapsados individualmente, exibindo a contagem de filhos.
   - JSON invalido ou nao-JSON mantem a exibicao em texto puro sem quebrar a tela.
 
+### 8) Exibicao da URL completa com query parameters no detalhe da requisicao
+
+- Status: Planned
+- Objetivo:
+  - Ao analisar uma requisicao especifica no historico, mostrar a URL completa efetivamente recebida, incluindo a query string com todos os parametros (chave e valor) tal como foi montada na chamada.
+- Valor:
+  - Facilita depuracao ao permitir ver exatamente quais parametros e valores foram enviados, sem precisar reconstruir a URL manualmente a partir da lista de parametros.
+  - Reduz duvidas sobre encoding, parametros repetidos e ordem dos parametros na query string.
+- Criterios de aceite (alto nivel):
+  - A tela de detalhe de uma requisicao exibe a URL completa (rota + query string) tal como recebida pelo servidor.
+  - Usuario consegue copiar a URL completa com um clique.
+  - Parametros repetidos e caracteres especiais (encoding) sao preservados na exibicao.
+
 ## Como contribuir com o roadmap
 
 - Abra uma issue descrevendo problema, impacto e sugestao.
